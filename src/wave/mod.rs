@@ -151,7 +151,7 @@ mod tests {
     use std::fs;
 
     #[test]
-    fn test_parse_wave_file() {
+    fn test_parse_wave_file_16_bit_stereo() {
         let bytes: [u8; 60] = [
             0x52, 0x49, 0x46, 0x46, // RIFF
             0x34, 0x00, 0x00, 0x00, // chunk size
@@ -168,6 +168,44 @@ mod tests {
 
             0x64, 0x61, 0x74, 0x61, // data
             0x10, 0x00, 0x00, 0x00, // chunk size
+            0x00, 0x00, 0x00, 0x00, // sample 1 L+R
+            0x24, 0x17, 0x1e, 0xf3, // sample 2 L+R
+            0x3c, 0x13, 0x3c, 0x14, // sample 3 L+R
+            0x16, 0xf9, 0x18, 0xf9, // sample 4 L+R
+        ];
+
+        let wave = parse_wave_file(&bytes).unwrap();
+
+        assert_eq!(wave.format.sample_rate, 22050);
+        assert_eq!(wave.format.bit_depth, 16);
+        assert_eq!(wave.format.num_channels, 2);
+
+        assert_eq!(wave.data, [
+            0x0000, 0x0000, // sample 1 L+R
+            0x1724, 0xf31e, // sample 2 L+R
+            0x133c, 0x143c, // sample 3 L+R
+            0xf916, 0xf918, // sample 4 L+R
+        ]);
+    }
+
+    #[test]
+    fn test_parse_wave_file_24_bit_mono() {
+        let bytes: [u8; 60] = [
+            0x52, 0x49, 0x46, 0x46, // RIFF
+            0x34, 0x00, 0x00, 0x00, // chunk size
+            0x57, 0x41, 0x56, 0x45, // WAVE
+
+            0x66, 0x6d, 0x74, 0x20, // fmt_
+            0x10, 0x00, 0x00, 0x00, // chunk size
+            0x01, 0x00,             // audio format
+            0x01, 0x00,             // num channels
+            0x44, 0xac, 0x00, 0x00, // sample rate
+            0x88, 0x58, 0x01, 0x00, // byte rate
+            0x04, 0x00,             // block align
+            0x20, 0x00,             // bits per sample
+
+            0x64, 0x61, 0x74, 0x61, // data
+            0x10, 0x00, 0x00, 0x00, // chunk size
             0x00, 0x00, 0x00, 0x00, // sample 1
             0x24, 0x17, 0x1e, 0xf3, // sample 2
             0x3c, 0x13, 0x3c, 0x14, // sample 3
@@ -176,14 +214,15 @@ mod tests {
 
         let wave = parse_wave_file(&bytes).unwrap();
 
-        assert_eq!(wave.format.sample_rate, 22050);
-        assert_eq!(wave.format.bit_depth, 16);
-        assert_eq!(wave.format.num_channels, 2);
+        assert_eq!(wave.format.sample_rate, 44100);
+        assert_eq!(wave.format.bit_depth, 32);
+        assert_eq!(wave.format.num_channels, 1);
+
         assert_eq!(wave.data, [
-            0x0000, 0x0000, // sample 1
-            0x1724, 0xf31e, // sample 2
-            0x133c, 0x143c, // sample 3
-            0xf916, 0xf918, // sample 4
+            0x00000000, // sample 1
+            0xf31e1724, // sample 2
+            0x143c133c, // sample 3
+            0xf918f916, // sample 4
         ]);
     }
 }
