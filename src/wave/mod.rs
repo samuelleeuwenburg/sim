@@ -10,23 +10,23 @@ enum ChunkID {
 }
 
 #[derive(Debug, PartialEq)]
-enum Samples {
+pub enum Samples {
     BitDepth8(Vec<u8>),
-    BitDepth16(Vec<u16>),
+    BitDepth16(Vec<i16>),
     BitDepth24(Vec<u32>),
 }
 
 #[derive(Debug, Clone)]
-struct WaveFormat {
-    sample_rate: u32,
-    bit_depth: u16,
-    num_channels: u16,
+pub struct WaveFormat {
+    pub sample_rate: u32,
+    pub num_channels: u16,
+    pub bit_depth: u16,
 }
 
 #[derive(Debug)]
-struct Wave {
-    format: WaveFormat,
-    data: Samples,
+pub struct Wave {
+    pub format: WaveFormat,
+    pub data: Samples,
 }
 
 fn parse_chunk_id(id: [u8;4]) -> Result<ChunkID, &'static str> {
@@ -91,7 +91,7 @@ fn parse_data_chunk(format: &WaveFormat, bytes: &[u8]) -> Result<Samples, &'stat
             samples.map_err(|_| "couldnt parse samples").map(|s| Samples::BitDepth8(s))
         }
         16 => {
-            let samples = read_samples(&format, bytes, |b| b.try_into().map(|b| u16::from_le_bytes(b)));
+            let samples = read_samples(&format, bytes, |b| b.try_into().map(|b| i16::from_le_bytes(b)));
             samples.map_err(|_| "couldnt parse samples").map(|s| Samples::BitDepth16(s))
         }
         24 => {
@@ -145,7 +145,7 @@ fn parse_chunks(bytes: &[u8]) -> Result<Wave, &'static str> {
     Ok(wave)
 }
 
-fn parse_wave_file(bytes: &[u8]) -> Result<Wave, &'static str> {
+pub fn parse_wave(bytes: &[u8]) -> Result<Wave, &'static str> {
     let riff = bytes[0..4]
         .try_into()
         .map_err(|_| "can't read chunk id")
@@ -168,7 +168,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_wave_file_16_bit_stereo() {
+    fn test_parse_wave_16_bit_stereo() {
         let bytes: [u8; 60] = [
             0x52, 0x49, 0x46, 0x46, // RIFF
             0x34, 0x00, 0x00, 0x00, // chunk size
@@ -191,7 +191,7 @@ mod tests {
             0x16, 0xf9, 0x18, 0xf9, // sample 4 L+R
         ];
 
-        let wave = parse_wave_file(&bytes).unwrap();
+        let wave = parse_wave(&bytes).unwrap();
 
         assert_eq!(wave.format.sample_rate, 22050);
         assert_eq!(wave.format.bit_depth, 16);
@@ -206,7 +206,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_wave_file_24_bit_mono() {
+    fn test_parse_wave_24_bit_mono() {
         let bytes: [u8; 56] = [
             0x52, 0x49, 0x46, 0x46, // RIFF
             0x30, 0x00, 0x00, 0x00, // chunk size
@@ -229,7 +229,7 @@ mod tests {
             0x13, 0x3c, 0x14,       // sample 4
         ];
 
-        let wave = parse_wave_file(&bytes).unwrap();
+        let wave = parse_wave(&bytes).unwrap();
 
         assert_eq!(wave.format.sample_rate, 44100);
         assert_eq!(wave.format.bit_depth, 24);
