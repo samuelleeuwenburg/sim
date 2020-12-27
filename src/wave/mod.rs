@@ -13,7 +13,7 @@ enum ChunkID {
 pub enum Samples {
     BitDepth8(Vec<u8>),
     BitDepth16(Vec<i16>),
-    BitDepth24(Vec<u32>),
+    BitDepth24(Vec<i32>),
 }
 
 #[derive(Debug, Clone)]
@@ -59,26 +59,18 @@ fn parse_fmt_chunk(bytes: &[u8]) -> Result<WaveFormat, &'static str> {
 }
 
 fn read_samples<T, F: Fn(&[u8]) -> Result<T, TryFromSliceError>>(format: &WaveFormat, bytes: &[u8], read_sample: F) -> Result<Vec<T>, TryFromSliceError> {
-    let sample_bytes = (format.bit_depth / 8) as usize;
-    let slice_bytes = sample_bytes * (format.num_channels as usize);
-
+    let num_bytes = (format.bit_depth / 8) as usize;
     let mut pos = 0;
     let mut samples = vec![];
 
     loop {
-        if pos + slice_bytes > bytes.len() {
+        if pos + num_bytes > bytes.len() {
             break;
         }
 
-        for channel in 0..(format.num_channels as usize) {
-            let offset = channel * sample_bytes;
-            let start = offset + pos;
-            let end = offset + pos + sample_bytes;
+        samples.push(read_sample(&bytes[pos..pos + num_bytes])?);
 
-            samples.push(read_sample(&bytes[start..end])?);
-        }
-
-        pos += slice_bytes;
+        pos += num_bytes;
     }
 
     Ok(samples)
@@ -95,7 +87,7 @@ fn parse_data_chunk(format: &WaveFormat, bytes: &[u8]) -> Result<Samples, &'stat
             samples.map_err(|_| "couldnt parse samples").map(|s| Samples::BitDepth16(s))
         }
         24 => {
-            let samples = read_samples(&format, bytes, |b| [b[0], b[1], b[2], 0][0..4].try_into().map(|b| u32::from_le_bytes(b)));
+            let samples = read_samples(&format, bytes, |b| [0, b[0], b[1], b[2]][0..4].try_into().map(|b| i32::from_le_bytes(b)));
             samples.map_err(|_| "couldnt parse samples").map(|s| Samples::BitDepth24(s))
         }
         _ => {
@@ -165,6 +157,7 @@ pub fn parse_wave(bytes: &[u8]) -> Result<Wave, &'static str> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(overflowing_literals)]
     use super::*;
 
     #[test]
@@ -237,9 +230,9 @@ mod tests {
 
         assert_eq!(wave.data, Samples::BitDepth24(vec![
             0x00000000, // sample 1
-            0x00172400, // sample 2
-            0x003cf31e, // sample 3
-            0x00143c13, // sample 4
+            0x17240000, // sample 2
+            0x3cf31e00, // sample 3
+            0x143c1300, // sample 4
         ]));
     }
 }
