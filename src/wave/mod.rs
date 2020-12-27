@@ -1,4 +1,5 @@
 use std::convert::TryInto;
+use std::array::TryFromSliceError;
 
 #[derive(Debug, PartialEq)]
 enum ChunkID {
@@ -6,6 +7,13 @@ enum ChunkID {
     FMT,
     LIST,
     DATA,
+}
+
+#[derive(Debug, PartialEq)]
+enum Samples {
+    BitDepth8(Vec<u8>),
+    BitDepth16(Vec<u16>),
+    BitDepth24(Vec<u32>),
 }
 
 #[derive(Debug, Clone)]
@@ -18,7 +26,7 @@ struct WaveFormat {
 #[derive(Debug)]
 struct Wave {
     format: WaveFormat,
-    data: Vec<usize>,
+    data: Samples,
 }
 
 fn parse_chunk_id(id: [u8;4]) -> Result<ChunkID, &'static str> {
@@ -50,7 +58,7 @@ fn parse_fmt_chunk(bytes: &[u8]) -> Result<WaveFormat, &'static str> {
     Ok(WaveFormat { num_channels, sample_rate, bit_depth })
 }
 
-fn parse_data_chunk(format: &WaveFormat, bytes: &[u8]) -> Result<Vec<usize>, &'static str> {
+fn read_samples<T, F: Fn(&[u8]) -> Result<T, TryFromSliceError>>(format: &WaveFormat, bytes: &[u8], read_sample: F) -> Result<Vec<T>, TryFromSliceError> {
     let sample_bytes = (format.bit_depth / 8) as usize;
     let slice_bytes = sample_bytes * (format.num_channels as usize);
 
@@ -67,21 +75,33 @@ fn parse_data_chunk(format: &WaveFormat, bytes: &[u8]) -> Result<Vec<usize>, &'s
             let start = offset + pos;
             let end = offset + pos + sample_bytes;
 
-            println!("{}:{}", start, end);
-
-            let sample = match format.bit_depth {
-                8 => bytes[start..end].try_into().map(|b| u8::from_le_bytes(b) as usize),
-                16 => bytes[start..end].try_into().map(|b| u16::from_le_bytes(b) as usize),
-                _ => bytes[start..end].try_into().map(|b| u32::from_le_bytes(b) as usize),
-            }.map_err(|_| "couldn't parse sample")?;
-
-            samples.push(sample);
+            samples.push(read_sample(&bytes[start..end])?);
         }
 
         pos += slice_bytes;
     }
 
     Ok(samples)
+}
+
+fn parse_data_chunk(format: &WaveFormat, bytes: &[u8]) -> Result<Samples, &'static str> {
+    match format.bit_depth {
+        8 => {
+            let samples = read_samples(&format, bytes, |b| b.try_into().map(|b| u8::from_le_bytes(b)));
+            samples.map_err(|_| "couldnt parse samples").map(|s| Samples::BitDepth8(s))
+        }
+        16 => {
+            let samples = read_samples(&format, bytes, |b| b.try_into().map(|b| u16::from_le_bytes(b)));
+            samples.map_err(|_| "couldnt parse samples").map(|s| Samples::BitDepth16(s))
+        }
+        24 => {
+            let samples = read_samples(&format, bytes, |b| [b[0], b[1], b[2], 0][0..4].try_into().map(|b| u32::from_le_bytes(b)));
+            samples.map_err(|_| "couldnt parse samples").map(|s| Samples::BitDepth24(s))
+        }
+        _ => {
+            Err("unsupported bit depth")
+        }
+    }
 }
 
 fn parse_chunks(bytes: &[u8]) -> Result<Wave, &'static str> {
@@ -107,8 +127,6 @@ fn parse_chunks(bytes: &[u8]) -> Result<Wave, &'static str> {
 
         let start = pos + 8;
         let end = pos + 8 + chunk_size as usize;
-
-        println!("{:?} {}", chunk_id, chunk_size);
 
         match chunk_id {
             ChunkID::FMT => format = parse_fmt_chunk(&bytes[start..end]),
@@ -148,7 +166,6 @@ fn parse_wave_file(bytes: &[u8]) -> Result<Wave, &'static str> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
 
     #[test]
     fn test_parse_wave_file_16_bit_stereo() {
@@ -180,19 +197,19 @@ mod tests {
         assert_eq!(wave.format.bit_depth, 16);
         assert_eq!(wave.format.num_channels, 2);
 
-        assert_eq!(wave.data, [
+        assert_eq!(wave.data, Samples::BitDepth16(vec![
             0x0000, 0x0000, // sample 1 L+R
             0x1724, 0xf31e, // sample 2 L+R
             0x133c, 0x143c, // sample 3 L+R
             0xf916, 0xf918, // sample 4 L+R
-        ]);
+        ]));
     }
 
     #[test]
     fn test_parse_wave_file_24_bit_mono() {
-        let bytes: [u8; 60] = [
+        let bytes: [u8; 56] = [
             0x52, 0x49, 0x46, 0x46, // RIFF
-            0x34, 0x00, 0x00, 0x00, // chunk size
+            0x30, 0x00, 0x00, 0x00, // chunk size
             0x57, 0x41, 0x56, 0x45, // WAVE
 
             0x66, 0x6d, 0x74, 0x20, // fmt_
@@ -202,28 +219,28 @@ mod tests {
             0x44, 0xac, 0x00, 0x00, // sample rate
             0x88, 0x58, 0x01, 0x00, // byte rate
             0x04, 0x00,             // block align
-            0x20, 0x00,             // bits per sample
+            0x18, 0x00,             // bits per sample
 
             0x64, 0x61, 0x74, 0x61, // data
-            0x10, 0x00, 0x00, 0x00, // chunk size
-            0x00, 0x00, 0x00, 0x00, // sample 1
-            0x24, 0x17, 0x1e, 0xf3, // sample 2
-            0x3c, 0x13, 0x3c, 0x14, // sample 3
-            0x16, 0xf9, 0x18, 0xf9, // sample 4
+            0x0c, 0x00, 0x00, 0x00, // chunk size
+            0x00, 0x00, 0x00,       // sample 1
+            0x00, 0x24, 0x17,       // sample 2
+            0x1e, 0xf3, 0x3c,       // sample 3
+            0x13, 0x3c, 0x14,       // sample 4
         ];
 
         let wave = parse_wave_file(&bytes).unwrap();
 
         assert_eq!(wave.format.sample_rate, 44100);
-        assert_eq!(wave.format.bit_depth, 32);
+        assert_eq!(wave.format.bit_depth, 24);
         assert_eq!(wave.format.num_channels, 1);
 
-        assert_eq!(wave.data, [
+        assert_eq!(wave.data, Samples::BitDepth24(vec![
             0x00000000, // sample 1
-            0xf31e1724, // sample 2
-            0x143c133c, // sample 3
-            0xf918f916, // sample 4
-        ]);
+            0x00172400, // sample 2
+            0x003cf31e, // sample 3
+            0x00143c13, // sample 4
+        ]));
     }
 }
 
