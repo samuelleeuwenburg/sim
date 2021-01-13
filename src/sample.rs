@@ -2,7 +2,7 @@ use std::convert::From;
 
 use crate::wave::{Wave, Samples};
 
-type Point = f64;
+type Point = f32;
 
 type Stream = Vec<Point>;
 
@@ -15,7 +15,7 @@ pub struct Sample {
 }
 
 impl Sample {
-    pub fn get_audio<'a>(&mut self, buffer: &'a mut [f64;1024]) -> &'a [f64;1024] {
+    pub fn get_audio<'a>(&mut self, buffer: &'a mut [f32;2048]) -> &'a [f32;2048] {
         for byte in buffer.iter_mut() {
             // @TODO: handle mono tracks
             self.position = if self.position >= self.stream.len() - 1 {
@@ -51,15 +51,15 @@ impl From<Wave> for Sample {
 }
 
 fn u8_to_point(n: u8) -> Point {
-    (n as f64 / u8::MAX as f64) * 2.0 - 1.0
+    (n as f32 / u8::MAX as f32) * 2.0 - 1.0
 }
 
 fn i16_to_point(n: i16) -> Point {
-    n as f64 / i16::MAX as f64
+    n as f32 / i16::MAX as f32
 }
 
 fn i32_to_point(n: i32) -> Point {
-    n as f64 / i32::MAX as f64
+    n as f32 / i32::MAX as f32
 }
 
 #[cfg(test)]
@@ -70,7 +70,7 @@ mod tests {
     #[test]
     fn test_u8_to_point() {
         assert_eq!(u8_to_point(u8::MIN), -1.0);
-        assert_eq!(u8_to_point(0x80u8), 0.0039215686274509665);
+        assert_eq!(u8_to_point(0x80u8), 0.003921628);
         assert_eq!(u8_to_point(u8::MAX), 1.0);
     }
 
