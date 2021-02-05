@@ -17,7 +17,6 @@ pub struct Sample {
 impl Sample {
     pub fn get_audio<'a>(&mut self, buffer: &'a mut [f32;2048]) -> &'a [f32;2048] {
         for byte in buffer.iter_mut() {
-            // @TODO: handle mono tracks
             self.position = if self.position >= self.stream.len() - 1 {
                 0
             } else {
@@ -35,10 +34,22 @@ impl From<Wave> for Sample {
     fn from(wave: Wave) -> Self {
         let num_channels = wave.format.num_channels as usize;
 
-        let stream = match wave.data {
+        let stream: Stream = match wave.data {
             Samples::BitDepth8(samples) => samples.into_iter().map(u8_to_point).collect(),
             Samples::BitDepth16(samples) => samples.into_iter().map(i16_to_point).collect(),
             Samples::BitDepth24(samples) => samples.into_iter().map(i32_to_point).collect(),
+        };
+
+        let stream: Stream = match num_channels {
+            1 => {
+                let mut new_stream = vec![];
+                for byte in stream {
+                    new_stream.append(&mut vec![byte, byte]);
+                }
+                new_stream
+            }
+            2 => stream,
+            _ => panic!("non supported channel size to create sample"),
         };
 
         Sample {
