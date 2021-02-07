@@ -6,6 +6,16 @@ pub fn get_stream(size: BufferSize) -> Stream {
     vec![0.0; size]
 }
 
+pub fn combine_streams(streams: Vec<Stream>) -> Stream {
+    let size = streams.iter().max_by(|x, y| x.len().cmp(&y.len())).unwrap().len();
+
+    get_stream(size)
+        .iter()
+        .enumerate()
+        .map(|(i, _)| streams.iter().fold(0.0, |xs, x| xs + x.get(i).unwrap_or(&0.0)))
+        .collect()
+}
+
 pub fn u8_to_point(n: u8) -> Point {
     (n as f32 / u8::MAX as f32) * 2.0 - 1.0
 }
@@ -22,6 +32,42 @@ pub fn i32_to_point(n: i32) -> Point {
 mod tests {
     #![allow(overflowing_literals)]
     use super::*;
+
+    #[test]
+    fn test_combine_streams() {
+        assert_eq!(
+            combine_streams(vec![
+                vec![-1.0, -0.5, 0.0, 0.5, 1.0],
+            ]),
+                vec![-1.0, -0.5, 0.0, 0.5, 1.0],
+        );
+
+        assert_eq!(
+            combine_streams(vec![
+                vec![1.0, 0.2, 1.0, 1.0, 0.2],
+                vec![0.0, 0.0, 0.0, 0.0, 0.0],
+            ]),
+                vec![1.0, 0.2, 1.0, 1.0, 0.2],
+        );
+
+        assert_eq!(
+            combine_streams(vec![
+                vec![0.1, 0.0, -0.1, -0.2, -0.3],
+                vec![0.2, 0.1, 0.0, -0.1, -0.2],
+                vec![0.3, 0.2, 0.1, 0.0, -0.1],
+            ]),
+                vec![0.6, 0.3, 0.0, -0.3, -0.6],
+        );
+
+        assert_eq!(
+            combine_streams(vec![
+                vec![0.1, 0.0, -0.1, -0.2, -0.3],
+                vec![0.2, 0.1, 0.0],
+                vec![0.3],
+            ]),
+                vec![0.6, 0.1, -0.1, -0.2, -0.3],
+        );
+    }
 
     #[test]
     fn test_u8_to_point() {

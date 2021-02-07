@@ -26,7 +26,7 @@ impl Device {
     }
 
     pub fn create_stream(&self) -> Stream {
-        stream::get_stream(self.buffer_size * self.channels)
+        stream::get_stream(self.buffer_size)
     }
 
     fn attach_cpal_stream(&mut self, cpal_stream: cpal::Stream) {
@@ -34,15 +34,15 @@ impl Device {
     }
 }
 
-pub fn get_stream(tx_buffer_ready: mpsc::Sender<bool>) -> Device {
+pub fn get_device(tx_buffer_ready: mpsc::Sender<bool>) -> Device {
     let (tx, rx_buffer) = mpsc::channel();
     let channels = 2;
-    let buffer_size = 1024;
+    let buffer_size = 1024 * channels;
     let sample_rate = 44_100;
 
     let mut device = Device::new(channels, buffer_size, sample_rate, tx);
 
-    println!("buffer_size: {} \nchannels: {}\n sample_rate: {}\n", buffer_size, channels, sample_rate);
+    println!("buffer_size: {} \nchannels: {} \nsample_rate: {}\n", buffer_size, channels, sample_rate);
 
     let host = cpal::default_host();
     let cpal_device = host.default_output_device().expect("no output device available");
@@ -55,7 +55,7 @@ pub fn get_stream(tx_buffer_ready: mpsc::Sender<bool>) -> Device {
         .with_sample_rate(cpal::SampleRate(sample_rate as u32));
 
     match supported_config.buffer_size() {
-        SupportedBufferSize::Range { min, max } => println!("minimal buffer size: {} \nmaximum buffer size: {}", min, max),
+        SupportedBufferSize::Range { min, max } => println!("minimal buffer size: {} \nmaximum buffer size: {}\n", min, max),
         SupportedBufferSize::Unknown => println!("unknown buffer size support"),
     }
 
@@ -63,7 +63,7 @@ pub fn get_stream(tx_buffer_ready: mpsc::Sender<bool>) -> Device {
 
     let mut config: StreamConfig = supported_config.into();
 
-    config.buffer_size = CpalBufferSize::Fixed(buffer_size as u32);
+    config.buffer_size = CpalBufferSize::Fixed((buffer_size / channels) as u32);
     config.channels = channels as u16;
 
     let err_fn = |err| eprintln!("an error occurred on the output audio stream: {}", err);
@@ -81,7 +81,7 @@ pub fn get_stream(tx_buffer_ready: mpsc::Sender<bool>) -> Device {
                 move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
                     let buffer: Stream = match rx_buffer.try_recv() {
                         Ok(b) => b,
-                        Err(_) => panic!("no buffer available!"),
+                        Err(_) => stream::get_stream(buffer_size * channels),
                     };
 
                     for (i, sample) in data.iter_mut().enumerate() {

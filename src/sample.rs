@@ -13,16 +13,21 @@ pub struct Sample {
 }
 
 impl Sample {
-    pub fn get_stream(&mut self, buffer_size: stream::BufferSize) -> Stream {
+    fn step(&mut self) {
+        // wrap around
+        self.position = if self.position >= self.stream.len() - 1 {
+            0
+        } else {
+            self.position + 1
+        };
+    }
+
+    pub fn get_playback_stream(&mut self, buffer_size: stream::BufferSize) -> Stream {
         let mut stream = stream::get_stream(buffer_size);
 
         for byte in stream.iter_mut() {
-            self.position = if self.position >= self.stream.len() - 1 {
-                0
-            } else {
-                self.position + 1
-            };
-
+            // step through the sample
+            self.step();
             *byte = self.stream.get(self.position).unwrap().clone();
         }
 
