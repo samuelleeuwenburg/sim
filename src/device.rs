@@ -26,7 +26,7 @@ impl Device {
     }
 
     pub fn create_stream(&self) -> Stream {
-        stream::get_stream(self.buffer_size)
+        Stream::empty(self.buffer_size, self.channels)
     }
 
     fn attach_cpal_stream(&mut self, cpal_stream: cpal::Stream) {
@@ -57,7 +57,7 @@ pub fn get_device(tx_buffer_ready: mpsc::Sender<bool>) -> Device {
     match supported_config.buffer_size() {
         SupportedBufferSize::Range { min, max } => println!("minimal buffer size: {} \nmaximum buffer size: {}\n", min, max),
         SupportedBufferSize::Unknown => println!("unknown buffer size support"),
-    }
+    };
 
     let sample_format = supported_config.sample_format();
 
@@ -66,11 +66,11 @@ pub fn get_device(tx_buffer_ready: mpsc::Sender<bool>) -> Device {
     config.buffer_size = CpalBufferSize::Fixed((buffer_size / channels) as u32);
     config.channels = channels as u16;
 
-    let err_fn = |err| eprintln!("an error occurred on the output audio stream: {}", err);
-
     // initial empty buffer
     let buffer = device.create_stream();
     device.tx.send(buffer).unwrap();
+
+    let err_fn = |err| eprintln!("an error occurred on the output audio stream: {}", err);
 
     let stream = match sample_format {
         SampleFormat::F32 => {
@@ -81,11 +81,11 @@ pub fn get_device(tx_buffer_ready: mpsc::Sender<bool>) -> Device {
                 move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
                     let buffer: Stream = match rx_buffer.try_recv() {
                         Ok(b) => b,
-                        Err(_) => stream::get_stream(buffer_size * channels),
+                        Err(_) => panic!("no buffer available for playback"),
                     };
 
                     for (i, sample) in data.iter_mut().enumerate() {
-                        let v = match buffer.get(i) {
+                        let v = match buffer.samples.get(i) {
                             Some(v) => v,
                             None => panic!("failed getting value from buffer @ {}", i),
                         };

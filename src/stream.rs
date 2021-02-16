@@ -1,19 +1,10 @@
 pub type BufferSize = usize;
 pub type Point = f32;
-pub type Stream = Vec<Point>;
 
-pub fn get_stream(size: BufferSize) -> Stream {
-    vec![0.0; size]
-}
-
-pub fn combine_streams(streams: Vec<Stream>) -> Stream {
-    let size = streams.iter().max_by(|x, y| x.len().cmp(&y.len())).unwrap().len();
-
-    get_stream(size)
-        .iter()
-        .enumerate()
-        .map(|(i, _)| streams.iter().fold(0.0, |xs, x| xs + x.get(i).unwrap_or(&0.0)))
-        .collect()
+#[derive(Debug, PartialEq)]
+pub struct Stream {
+    pub samples: Vec<Point>,
+    pub channels: usize,
 }
 
 pub fn u8_to_point(n: u8) -> Point {
@@ -28,46 +19,89 @@ pub fn i32_to_point(n: i32) -> Point {
     n as f32 / i32::MAX as f32
 }
 
+impl Stream {
+    pub fn empty(size: BufferSize, channels: usize) -> Self {
+        Stream { samples: vec![0.0; size], channels }
+    }
+
+    pub fn from_samples(samples: Vec<Point>, channels: usize) -> Self {
+        Stream { samples, channels }
+    }
+
+    fn mix(mut self, streams: &Vec<Stream>) -> Self {
+        for (i, sample) in self.samples.iter_mut().enumerate() {
+            *sample = streams.iter().fold(sample.clone(), |xs, x| xs + x.samples.get(i).unwrap_or(&0.0));
+        }
+
+        self
+    }
+
+    fn amplify(mut self, db: f32) -> Self {
+        let ratio = 10_f32.powf(db / 20.0);
+
+        for sample in self.samples.iter_mut() {
+            *sample = (sample.clone() * ratio).clamp(-1.0, 1.0);
+        }
+
+        self
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     #![allow(overflowing_literals)]
     use super::*;
 
     #[test]
-    fn test_combine_streams() {
-        assert_eq!(
-            combine_streams(vec![
-                vec![-1.0, -0.5, 0.0, 0.5, 1.0],
-            ]),
-                vec![-1.0, -0.5, 0.0, 0.5, 1.0],
-        );
+    fn test_mix() {
+        let samples = vec![-1.0, -0.5, 0.0, 0.5, 1.0];
+        let streams = vec![];
+        let stream = Stream::from_samples(samples, 1).mix(&streams);
+        assert_eq!(stream.samples, vec![-1.0, -0.5, 0.0, 0.5, 1.0]);
 
-        assert_eq!(
-            combine_streams(vec![
-                vec![1.0, 0.2, 1.0, 1.0, 0.2],
-                vec![0.0, 0.0, 0.0, 0.0, 0.0],
-            ]),
-                vec![1.0, 0.2, 1.0, 1.0, 0.2],
-        );
+        let samples = vec![1.0, 0.2, 1.0, 1.0, 0.2];
+        let streams = vec![Stream::from_samples(vec![0.0, 0.0, 0.0, 0.0, 0.0], 1)];
+        let stream = Stream::from_samples(samples, 1).mix(&streams);
+        assert_eq!(stream.samples, vec![1.0, 0.2, 1.0, 1.0, 0.2]);
 
-        assert_eq!(
-            combine_streams(vec![
-                vec![0.1, 0.0, -0.1, -0.2, -0.3],
-                vec![0.2, 0.1, 0.0, -0.1, -0.2],
-                vec![0.3, 0.2, 0.1, 0.0, -0.1],
-            ]),
-                vec![0.6, 0.3, 0.0, -0.3, -0.6],
-        );
+        let samples = vec![0.1, 0.0, -0.1, -0.2, -0.3];
+        let streams = vec![
+            Stream::from_samples(vec![0.2, 0.1, 0.0, -0.1, -0.2], 1),
+            Stream::from_samples(vec![0.3, 0.2, 0.1, 0.0, -0.1], 1),
+        ];
+        let stream = Stream::from_samples(samples, 1).mix(&streams);
+        assert_eq!(stream.samples, vec![0.6, 0.3, 0.0, -0.3, -0.6]);
 
-        assert_eq!(
-            combine_streams(vec![
-                vec![0.1, 0.0, -0.1, -0.2, -0.3],
-                vec![0.2, 0.1, 0.0],
-                vec![0.3],
-            ]),
-                vec![0.6, 0.1, -0.1, -0.2, -0.3],
-        );
+        let samples = vec![0.1, 0.0, -0.1, -0.2, -0.3];
+        let streams = vec![
+            Stream::from_samples(vec![0.2, 0.1, 0.0], 1),
+            Stream::from_samples(vec![0.3], 1),
+        ];
+        let stream = Stream::from_samples(samples, 1).mix(&streams);
+        assert_eq!(stream.samples, vec![0.6, 0.1, -0.1, -0.2, -0.3]);
     }
+
+    #[test]
+    fn test_amplify() {
+        let stream = Stream::empty(1, 1).amplify(6.0);
+        assert_eq!(stream.samples, vec![0.0]);
+
+        // 6 dBs should roughly double / half
+        let stream = Stream::from_samples(vec![0.1, 0.25, 0.3, -0.1, -0.4], 1).amplify(6.0);
+        let rounded_samples: Vec<Point> = stream.samples.iter().map(|x| (x * 10.0).round() / 10.0).collect::<Vec<Point>>();
+        assert_eq!(rounded_samples, vec![0.2, 0.5, 0.6, -0.2, -0.8]);
+
+        let stream = Stream::from_samples(vec![0.4, 0.5, 0.8, -0.3, -0.6], 1).amplify(-6.0);
+        let rounded_samples: Vec<Point> = stream.samples.iter().map(|x| (x * 100.0).round() / 100.0).collect::<Vec<Point>>();
+        assert_eq!(rounded_samples, vec![0.2, 0.25, 0.4, -0.15, -0.3]);
+
+        // clamp the value
+        let stream = Stream::from_samples(vec![0.1, 0.4, 0.6, -0.2, -0.3, -0.5], 1).amplify(12.0);
+        let rounded_samples: Vec<Point> = stream.samples.iter().map(|x| (x * 100.0).round() / 100.0).collect::<Vec<Point>>();
+        assert_eq!(rounded_samples, vec![0.4, 1.0, 1.0, -0.8, -1.0, -1.0]);
+    }
+
 
     #[test]
     fn test_u8_to_point() {
