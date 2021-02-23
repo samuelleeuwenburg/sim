@@ -5,16 +5,14 @@ mod ui;
 mod wave;
 mod track;
 
-use std::convert::Into;
 use std::fs;
-use std::sync::{mpsc};
+use std::convert::Into;
 use std::{thread, time};
 
 use crate::device::get_device;
-use crate::sample::Sample;
-use crate::stream::Stream;
-use crate::wave::{parse_wave, Wave};
 use crate::track::Track;
+use crate::wave::{parse_wave, Wave};
+use crate::sample::Sample;
 
 fn main() {
     let ui_thread = thread::spawn(|| {
@@ -29,14 +27,23 @@ fn main() {
     });
 
     let audio_thread = thread::spawn(|| {
-	let (tx_buffer_ready, rx_buffer_ready) = mpsc::channel();
-	let device = get_device(tx_buffer_ready);
+	let mut device = get_device();
+
+	let file = fs::read("./test_files/p_16_stereo.wav").unwrap();
+	let wave: Wave = parse_wave(&file).unwrap();
+	let sample: Sample = wave.into();
+	let mut track = Track::new().add_sample(sample);
 
 	loop {
-	    rx_buffer_ready.recv().unwrap();
-	    let buffer = Stream::empty(device.buffer_size * device.channels, device.channels);
+	    let buffer_size = device.buffer_size();
 
-	    device.tx.send(buffer).unwrap();
+	    if buffer_size > 0 {
+		let sample  = track.sample.as_mut().unwrap();
+		let buffer = sample.get_playback_stream(buffer_size, device.channels);
+
+		device.send_buffer(buffer).unwrap();
+	    }
+
 	}
     });
 

@@ -7,6 +7,7 @@ enum ChunkID {
     FMT,
     LIST,
     DATA,
+    JUNK,
 }
 
 #[derive(Debug, PartialEq)]
@@ -35,6 +36,7 @@ fn parse_chunk_id(id: [u8;4]) -> Result<ChunkID, &'static str> {
         [b'f', b'm', b't', b' '] => Ok(ChunkID::FMT),
         [b'L', b'I', b'S', b'T'] => Ok(ChunkID::LIST),
         [b'd', b'a', b't', b'a'] => Ok(ChunkID::DATA),
+        [b'J', b'U', b'N', b'K'] => Ok(ChunkID::JUNK),
         _ => Err("unknown chunk id"),
     }
 }

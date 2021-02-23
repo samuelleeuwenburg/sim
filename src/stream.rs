@@ -1,7 +1,8 @@
 pub type BufferSize = usize;
+
 pub type Point = f32;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Stream {
     pub samples: Vec<Point>,
     pub channels: usize,
@@ -28,7 +29,7 @@ impl Stream {
         Stream { samples, channels }
     }
 
-    fn mix(mut self, streams: &Vec<Stream>) -> Self {
+    pub fn mix(mut self, streams: &Vec<Stream>) -> Self {
         for (i, sample) in self.samples.iter_mut().enumerate() {
             *sample = streams.iter().fold(sample.clone(), |xs, x| xs + x.samples.get(i).unwrap_or(&0.0));
         }
@@ -36,7 +37,7 @@ impl Stream {
         self
     }
 
-    fn amplify(mut self, db: f32) -> Self {
+    pub fn _amplify(mut self, db: f32) -> Self {
         let ratio = 10_f32.powf(db / 20.0);
 
         for sample in self.samples.iter_mut() {
