@@ -61,7 +61,8 @@ pub fn get_device() -> Device {
     let (tx_buffer, rx_buffer) = mpsc::channel();
 
     let channels = 2;
-    let buffer_size = 1024 * 10;
+    let buffer_size = 1024 * channels;
+    let cpal_buffer_size = 512;
     let sample_rate = 44_100;
 
     let mut device = Device::new(buffer_size, channels, tx_buffer, rx_buffer_read);
@@ -83,7 +84,7 @@ pub fn get_device() -> Device {
     let sample_format = supported_config.sample_format();
 
     let mut config: StreamConfig = supported_config.into();
-    config.buffer_size = CpalBufferSize::Fixed(4096);
+    config.buffer_size = CpalBufferSize::Fixed(cpal_buffer_size);
 
     let err_fn = |err| eprintln!("an error occurred on the output audio stream: {}", err);
 
