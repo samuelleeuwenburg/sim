@@ -33,9 +33,14 @@ fn main() {
 	let file = fs::read("./test_files/p_16_stereo.wav").unwrap();
 	let wave: Wave = parse_wave(&file).unwrap();
 	let sample: Sample = wave.into();
-	let example_track = Track::new().add_sample(sample);
+	let piano_track = Track::new().add_sample(sample);
 
-	let mut tracks: Vec<Track> = vec![example_track];
+	let file = fs::read("./test_files/f#_warm.wav").unwrap();
+	let wave: Wave = parse_wave(&file).unwrap();
+	let sample: Sample = wave.into();
+	let guitar_track = Track::new().add_sample(sample);
+
+	let mut tracks: Vec<Track> = vec![piano_track, guitar_track];
 
 	loop {
 	    let buffer_size = device.buffer_size();
