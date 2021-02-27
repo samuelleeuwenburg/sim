@@ -6,6 +6,7 @@ use crate::stream::Stream;
 
 #[derive(Debug)]
 pub struct Sample {
+    pub name: String,
     stream: Stream,
     speed: f64,
     position: usize,
@@ -47,6 +48,7 @@ impl From<Wave> for Sample {
         let stream = Stream::from_samples(samples, num_channels);
 
         Sample {
+	    name: wave.name.to_owned(),
             stream,
             speed: 1.0,
             position: 0,

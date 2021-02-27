@@ -1,18 +1,16 @@
 use std::sync::mpsc;
 
 use std::sync::{Arc, Mutex};
-use std::thread;
-use std::thread::JoinHandle;
 use cpal::{Sample, SampleFormat, StreamConfig, BufferSize as CpalBufferSize};
-use cpal::traits::{StreamTrait, DeviceTrait, HostTrait};
-use cpal::SupportedBufferSize;
-use crate::stream;
+use cpal::traits::{DeviceTrait, HostTrait};
 use crate::stream::Stream;
 
-pub fn get_device(buffer_size: usize, channels: usize) -> (mpsc::Receiver<usize>, Arc<Mutex<Stream>>, cpal::Stream) {
+pub fn get_device(
+    buffer_size: usize,
+    channels: usize,
+    sample_rate: usize,
+) -> (mpsc::Receiver<usize>, Arc<Mutex<Stream>>, cpal::Stream) {
     let (tx_buffer_read, rx_buffer_read) = mpsc::channel();
-
-    let sample_rate = 44_100;
 
     let buffer = Arc::new(Mutex::new(Stream::empty(buffer_size, channels)));
     let buffer_clone = Arc::clone(&buffer);

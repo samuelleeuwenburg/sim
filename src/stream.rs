@@ -85,20 +85,20 @@ mod tests {
 
     #[test]
     fn test_amplify() {
-        let stream = Stream::empty(1, 1).amplify(6.0);
+        let stream = Stream::empty(1, 1)._amplify(6.0);
         assert_eq!(stream.samples, vec![0.0]);
 
         // 6 dBs should roughly double / half
-        let stream = Stream::from_samples(vec![0.1, 0.25, 0.3, -0.1, -0.4], 1).amplify(6.0);
+        let stream = Stream::from_samples(vec![0.1, 0.25, 0.3, -0.1, -0.4], 1)._amplify(6.0);
         let rounded_samples: Vec<Point> = stream.samples.iter().map(|x| (x * 10.0).round() / 10.0).collect::<Vec<Point>>();
         assert_eq!(rounded_samples, vec![0.2, 0.5, 0.6, -0.2, -0.8]);
 
-        let stream = Stream::from_samples(vec![0.4, 0.5, 0.8, -0.3, -0.6], 1).amplify(-6.0);
+        let stream = Stream::from_samples(vec![0.4, 0.5, 0.8, -0.3, -0.6], 1)._amplify(-6.0);
         let rounded_samples: Vec<Point> = stream.samples.iter().map(|x| (x * 100.0).round() / 100.0).collect::<Vec<Point>>();
         assert_eq!(rounded_samples, vec![0.2, 0.25, 0.4, -0.15, -0.3]);
 
         // clamp the value
-        let stream = Stream::from_samples(vec![0.1, 0.4, 0.6, -0.2, -0.3, -0.5], 1).amplify(12.0);
+        let stream = Stream::from_samples(vec![0.1, 0.4, 0.6, -0.2, -0.3, -0.5], 1)._amplify(12.0);
         let rounded_samples: Vec<Point> = stream.samples.iter().map(|x| (x * 100.0).round() / 100.0).collect::<Vec<Point>>();
         assert_eq!(rounded_samples, vec![0.4, 1.0, 1.0, -0.8, -1.0, -1.0]);
     }

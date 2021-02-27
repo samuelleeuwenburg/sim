@@ -1,15 +1,16 @@
 extern crate ncurses;
 
+use std::sync::mpsc;
 use ncurses::*;
 
-enum Key {
-    Left,
-    Right,
-    Up,
-    Down,
+pub enum Message {
+    AddTrack(String),
 }
 
-type InputMap = Vec<Key>;
+pub struct InputView {
+    pub message: String,
+    pub input: Option<String>,
+}
 
 pub fn setup() {
     initscr();
@@ -25,7 +26,7 @@ pub fn setup() {
     getmaxyx(stdscr(), &mut window_height, &mut window_width);
 }
 
-pub fn input() {
+pub fn input(tx: mpsc::Sender<Message>) {
     let mut keys = vec![];
 
     let mut key = getch();
@@ -33,12 +34,23 @@ pub fn input() {
 	keys.push(key);
 	key = getch();
     }
+
+    match keys.as_slice() {
+	// A
+	&[65] => tx.send(Message::AddTrack("./test_files/f#_warm.wav".to_owned())).unwrap(),
+	_ => (),
+    }
 }
 
-pub fn draw() {
+pub fn draw(state: &InputView) {
     clear();
 
-    box_(stdscr(), 0, 0);
+    draw_input_view(state);
 
     refresh();
+}
+
+pub fn draw_input_view(data: &InputView) {
+    box_(stdscr(), 0, 0);
+    printw(&data.message);
 }

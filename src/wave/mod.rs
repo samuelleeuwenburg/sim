@@ -26,6 +26,7 @@ pub struct WaveFormat {
 
 #[derive(Debug)]
 pub struct Wave {
+    pub name: String,
     pub format: WaveFormat,
     pub data: Samples,
 }
@@ -98,7 +99,7 @@ fn parse_data_chunk(format: &WaveFormat, bytes: &[u8]) -> Result<Samples, &'stat
     }
 }
 
-fn parse_chunks(bytes: &[u8]) -> Result<Wave, &'static str> {
+fn parse_chunks(bytes: &[u8], name: &str) -> Result<Wave, &'static str> {
     let mut pos = 0;
 
     let mut format = Err("no fmt chunk found");
@@ -132,6 +133,7 @@ fn parse_chunks(bytes: &[u8]) -> Result<Wave, &'static str> {
     }
 
     let wave = Wave {
+	name: String::from(name),
         format: format?,
         data: data?,
     };
@@ -139,7 +141,7 @@ fn parse_chunks(bytes: &[u8]) -> Result<Wave, &'static str> {
     Ok(wave)
 }
 
-pub fn parse_wave(bytes: &[u8]) -> Result<Wave, &'static str> {
+pub fn parse_wave(bytes: &[u8], name: &str) -> Result<Wave, &'static str> {
     let riff = bytes[0..4]
         .try_into()
         .map_err(|_| "can't read chunk id")
@@ -154,7 +156,7 @@ pub fn parse_wave(bytes: &[u8]) -> Result<Wave, &'static str> {
         return Err("no RIFF chunk id found at the start of file")
     }
 
-    parse_chunks(&bytes[12..file_size as usize + 8])
+    parse_chunks(&bytes[12..file_size as usize + 8], name)
 }
 
 #[cfg(test)]
@@ -186,11 +188,12 @@ mod tests {
             0x16, 0xf9, 0x18, 0xf9, // sample 4 L+R
         ];
 
-        let wave = parse_wave(&bytes).unwrap();
+        let wave = parse_wave(&bytes, "foo").unwrap();
 
         assert_eq!(wave.format.sample_rate, 22050);
         assert_eq!(wave.format.bit_depth, 16);
         assert_eq!(wave.format.num_channels, 2);
+        assert_eq!(wave.name, "foo");
 
         assert_eq!(wave.data, Samples::BitDepth16(vec![
             0x0000, 0x0000, // sample 1 L+R
@@ -224,7 +227,7 @@ mod tests {
             0x13, 0x3c, 0x14,       // sample 4
         ];
 
-        let wave = parse_wave(&bytes).unwrap();
+        let wave = parse_wave(&bytes, "foo").unwrap();
 
         assert_eq!(wave.format.sample_rate, 44100);
         assert_eq!(wave.format.bit_depth, 24);
