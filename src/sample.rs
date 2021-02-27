@@ -21,7 +21,7 @@ impl Sample {
         };
     }
 
-    pub fn get_playback_stream(&mut self, buffer_size: stream::BufferSize, channels: usize) -> Stream {
+    pub fn get_stream(&mut self, buffer_size: stream::BufferSize, channels: usize) -> Stream {
         let mut stream = Stream::empty(buffer_size, channels);
 
         for byte in stream.samples.iter_mut() {

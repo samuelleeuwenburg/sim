@@ -15,7 +15,15 @@ use crate::track::Track;
 use crate::wave::{parse_wave, Wave};
 use crate::sample::Sample;
 
+use cpal::traits::StreamTrait;
+
 fn main() {
+    let buffer_size = 1024;
+    let channels = 2;
+
+    let (rx_buffer_read, buffer, device_stream) = get_device(buffer_size, channels);
+    device_stream.play().unwrap();
+
     let ui_thread = thread::spawn(|| {
 	ui::setup();
 
@@ -27,9 +35,7 @@ fn main() {
 	}
     });
 
-    let audio_thread = thread::spawn(|| {
-	let mut device = get_device();
-
+    let audio_thread = thread::spawn(move || {
 	let file = fs::read("./test_files/p_16_stereo.wav").unwrap();
 	let wave: Wave = parse_wave(&file).unwrap();
 	let sample: Sample = wave.into();
@@ -43,23 +49,28 @@ fn main() {
 	let mut tracks: Vec<Track> = vec![piano_track, guitar_track];
 
 	loop {
-	    let buffer_size = device.buffer_size();
+	    match rx_buffer_read.recv() {
+		Ok(used_samples) => {
+		    let mut streams = vec![];
 
-	    if buffer_size > 0 {
-		let mut streams = vec![];
+		    for track in tracks.iter_mut() {
+			let sample  = track.sample.as_mut().unwrap();
+			let stream = sample.get_stream(used_samples, channels);
+			streams.push(stream);
+		    }
 
-		for track in tracks.iter_mut() {
-		    let sample  = track.sample.as_mut().unwrap();
-		    let stream = sample.get_playback_stream(buffer_size, device.channels);
-		    streams.push(stream);
-		}
+		    let mut new_stream = Stream::empty(used_samples, channels)
+			.mix(&streams);
 
-		let buffer = Stream::empty(buffer_size, device.channels)
-		    .mix(&streams);
-
-		device.send_buffer(buffer).unwrap();
+		    // lock mutex
+		    let mut buffer = buffer.lock().unwrap();
+		    // remove read samples
+		    buffer.samples.drain(..used_samples);
+		    // add new samples
+		    buffer.samples.append(&mut new_stream.samples);
+		},
+		Err(e) => println!("err: {}", e),
 	    }
-
 	}
     });
 
