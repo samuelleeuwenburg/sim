@@ -3,16 +3,24 @@ use std::path::Path;
 use std::fs;
 
 use crate::sample::Sample;
+use crate::stream::Stream;
 use crate::wave::{parse_wave, Wave};
 
 #[derive(Debug)]
 pub struct Track {
     pub sample: Option<Sample>,
+    pub buffer: Stream,
 }
 
 impl Track {
-    pub fn new() -> Self {
-	Track { sample: None }
+    pub fn new(channels: usize) -> Self {
+	Track { sample: None, buffer: Stream::empty(0, channels) }
+    }
+
+    pub fn set_buffer_size(mut self, buffer_size: usize) -> Self {
+	self.buffer.samples.resize_with(buffer_size, Default::default);
+	self.sample = self.sample.map(|s| s.set_buffer_size(buffer_size));
+	self
     }
 
     pub fn add_sample(mut self, sample: Sample) -> Self {
@@ -32,6 +40,6 @@ impl TryFrom<String> for Track {
 	let wave: Wave = parse_wave(&file, &name).map_err(|e| format!("can't parse wave file: {}", e))?;
 	let sample: Sample = wave.into();
 
-	Ok(Track::new().add_sample(sample))
+	Ok(Track::new(sample.buffer.channels).add_sample(sample))
     }
 }

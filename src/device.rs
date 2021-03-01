@@ -46,23 +46,23 @@ pub fn get_device(
 		    let buffer = buffer_clone.lock().unwrap();
 
 		    if data.len() > buffer.samples.len() {
-			panic!(
-			    "trying to read samples ({}) not available in buffer ({})",
+			println!(
+			    "trying to read samples ({}) not available in buffer ({}), skipping",
 			    data.len(),
 			    buffer.samples.len()
 			);
+		    } else {
+			for (i, sample) in data.iter_mut().enumerate() {
+			    let v = match buffer.samples.get(i) {
+				Some(v) => v,
+				None => panic!("failed getting value from buffer @ {}", i),
+			    };
+
+			    *sample = Sample::from(v);
+			}
+
+			tx_buffer_read.send(data.len()).unwrap();
 		    }
-
-		    for (i, sample) in data.iter_mut().enumerate() {
-			let v = match buffer.samples.get(i) {
-			    Some(v) => v,
-			    None => panic!("failed getting value from buffer @ {}", i),
-			};
-
-			*sample = Sample::from(v);
-		    }
-
-		    tx_buffer_read.send(data.len()).unwrap();
                 },
                 err_fn
            )

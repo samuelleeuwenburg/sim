@@ -29,7 +29,7 @@ impl Stream {
         Stream { samples, channels }
     }
 
-    pub fn mix(mut self, streams: &Vec<Stream>) -> Self {
+    pub fn mix(mut self, streams: &Vec<&Stream>) -> Self {
         for (i, sample) in self.samples.iter_mut().enumerate() {
             *sample = streams.iter().fold(sample.clone(), |xs, x| xs + x.samples.get(i).unwrap_or(&0.0));
         }
@@ -63,7 +63,7 @@ mod tests {
 
         let samples = vec![1.0, 0.2, 1.0, 1.0, 0.2];
         let streams = vec![Stream::from_samples(vec![0.0, 0.0, 0.0, 0.0, 0.0], 1)];
-        let stream = Stream::from_samples(samples, 1).mix(&streams);
+        let stream = Stream::from_samples(samples, 1).mix(&streams.iter().collect());
         assert_eq!(stream.samples, vec![1.0, 0.2, 1.0, 1.0, 0.2]);
 
         let samples = vec![0.1, 0.0, -0.1, -0.2, -0.3];
@@ -71,7 +71,7 @@ mod tests {
             Stream::from_samples(vec![0.2, 0.1, 0.0, -0.1, -0.2], 1),
             Stream::from_samples(vec![0.3, 0.2, 0.1, 0.0, -0.1], 1),
         ];
-        let stream = Stream::from_samples(samples, 1).mix(&streams);
+        let stream = Stream::from_samples(samples, 1).mix(&streams.iter().collect());
         assert_eq!(stream.samples, vec![0.6, 0.3, 0.0, -0.3, -0.6]);
 
         let samples = vec![0.1, 0.0, -0.1, -0.2, -0.3];
@@ -79,7 +79,7 @@ mod tests {
             Stream::from_samples(vec![0.2, 0.1, 0.0], 1),
             Stream::from_samples(vec![0.3], 1),
         ];
-        let stream = Stream::from_samples(samples, 1).mix(&streams);
+        let stream = Stream::from_samples(samples, 1).mix(&streams.iter().collect());
         assert_eq!(stream.samples, vec![0.6, 0.1, -0.1, -0.2, -0.3]);
     }
 
