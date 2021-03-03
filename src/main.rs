@@ -14,7 +14,7 @@ use cpal::traits::StreamTrait;
 
 use crate::device::get_device;
 use crate::stream::Stream;
-use crate::state::{State, Message, handle_message};
+use crate::state::{State, Message, handle_message, handle_input};
 
 fn main() {
     let buffer_size = 1024;
@@ -29,8 +29,9 @@ fn main() {
 
     device_stream.play().unwrap();
 
-    let (tx, rx) = mpsc::channel::<Message>();
-
+    let (tx_msg, rx_msg) = mpsc::channel::<Message>();
+    let (tx_audio_quit, rx_audio_quit) = mpsc::channel::<()>();
+    let (tx_ui_quit, rx_ui_quit) = mpsc::channel::<()>();
 
     let audio_thread = thread::spawn(move || {
 	loop {
@@ -56,35 +57,54 @@ fn main() {
 		// add new samples
 		buffer.samples.append(&mut new_stream.samples);
 	    }
+
+	    if let Ok(_) = rx_audio_quit.try_recv() {
+		break;
+	    }
 	}
     });
 
     let ui_thread = thread::spawn(move || {
-	ui::setup();
+	let window_state = ui::setup();
+
+	let mut input = vec![];
 
 	loop {
+	    thread::sleep(time::Duration::from_millis(16));
+
 	    let state = state_ui.lock().unwrap();
 
-	    ui::input(&state, &tx);
-	    ui::draw(&state);
+	    input.append(&mut ui::get_input(&state));
 
-	    drop(state);
+	    handle_input(&mut input, &state, &tx_msg);
 
-	    thread::sleep(time::Duration::from_millis(160));
+	    ui::draw(&window_state, &state, &input);
+
+	    if let Ok(_) = rx_ui_quit.try_recv() {
+		break;
+	    }
 	}
+
+	// clean up
+	ui::quit();
     });
 
     let message_thread = thread::spawn(move || {
 	loop {
-	    match rx.recv() {
+	    match rx_msg.recv() {
+		Ok(Message::Quit) => {
+		    tx_audio_quit.send(()).unwrap();
+		    tx_ui_quit.send(()).unwrap();
+		    break;
+		},
 		Ok(msg) => handle_message(msg, &state),
 		Err(_) => (),
 	    }
 	}
     });
 
-
+    // await threads
+    message_thread.join().unwrap();
     audio_thread.join().unwrap();
     ui_thread.join().unwrap();
-    message_thread.join().unwrap();
 }

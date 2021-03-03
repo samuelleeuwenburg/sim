@@ -1,24 +1,37 @@
 extern crate ncurses;
 
 use std::sync::mpsc;
-use crate::state::{State, Message, handle_input};
+use crate::state;
+use crate::state::State;
 use ncurses::*;
 
-pub fn setup() {
+pub struct WindowState {
+    height: i32,
+    width: i32,
+}
+
+pub fn setup() -> WindowState {
     initscr();
     keypad(stdscr(), true);
     noecho();
+    raw();
+    set_escdelay(0);
 
     curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
 
     nodelay(stdscr(), true);
 
-    let mut window_height = 0;
-    let mut window_width = 0;
-    getmaxyx(stdscr(), &mut window_height, &mut window_width);
+    let mut state = WindowState {
+	height: 0,
+	width: 0,
+    };
+
+    getmaxyx(stdscr(), &mut state.height, &mut state.width);
+
+    state
 }
 
-pub fn input(state: &State, tx: &mpsc::Sender<Message>) {
+pub fn get_input(state: &State) -> Vec<i32> {
     let mut keys = vec![];
 
     let mut key = getch();
@@ -27,13 +40,33 @@ pub fn input(state: &State, tx: &mpsc::Sender<Message>) {
 	key = getch();
     }
 
-    if let Some(msg) = handle_input(keys.as_slice()) {
-	tx.send(msg).unwrap();
-    }
+    keys
 }
 
-pub fn draw(state: &State) {
+pub fn draw(window: &WindowState, state: &State, input: &Vec<i32>) {
     clear();
 
+    let (x, y) = state.cursor_pos;
+
+    mvprintw(y, x, "X");
+
+    draw_input_mode(window, input, &state.mode);
+
     refresh();
+}
+
+fn draw_input_mode(window: &WindowState, input: &Vec<i32>, mode: &state::Mode) {
+    let readable: String = input.iter()
+	.map(|&c| c as u8 as char)
+	.into_iter()
+	.collect();
+
+    match mode {
+	state::Mode::Normal => mvprintw(window.height - 1, 0, &format!("normal {}", readable)),
+	state::Mode::Input => mvprintw(window.height - 1, 0, &format!(":{}", readable)),
+    };
+}
+
+pub fn quit() {
+    endwin();
 }
