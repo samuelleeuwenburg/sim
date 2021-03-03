@@ -1,7 +1,7 @@
 use std::convert::TryInto;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
-use std::fmt;
+use std::cmp;
 
 use crate::track::Track;
 
@@ -45,6 +45,15 @@ pub enum Message {
 }
 
 
+fn get_multiplier(input: &[i32]) -> Result<i32, String> {
+    input.iter()
+	.map(|&c| c as u8 as char)
+	.collect::<String>()
+	.parse::<i32>()
+	.map_err(|e| format!("can't get input multiplier E:{:?}\n for:{:?}", e, input))
+}
+
+
 pub fn handle_input(input: &mut Vec<i32>, state: &State, tx: &mpsc::Sender<Message>) {
     match state.mode {
 	Mode::Normal => handle_input_mode_normal(input, &state, tx),
@@ -58,16 +67,16 @@ pub fn handle_input_mode_normal(input: &mut Vec<i32>, state: &State, tx: &mpsc::
 	    input.drain(..);
 	    None
 	}
+
 	&[.., 3] => Some(Message::Quit),
 
-	// :
 	&[58] => Some(Message::SetMode(Mode::Input)),
 
+	&[104] | &[.., 104] => Some(Message::Move((-get_multiplier(&input[..input.len() - 1]).unwrap_or(1), 0))),
+	&[108] | &[.., 108] => Some(Message::Move((get_multiplier(&input[..input.len() - 1]).unwrap_or(1), 0))),
+	&[106] | &[.., 106] => Some(Message::Move((0, get_multiplier(&input[..input.len() - 1]).unwrap_or(1)))),
+	&[107] | &[.., 107] => Some(Message::Move((0, -get_multiplier(&input[..input.len() - 1]).unwrap_or(1)))),
 
-	&[104] => Some(Message::Move((-1, 0))), // left
-	&[108] => Some(Message::Move((1, 0))), // right
-	&[106] => Some(Message::Move((0, 1))), // down
-	&[107] => Some(Message::Move((0, -1))), // up
 	_ => None,
     };
 
@@ -83,6 +92,13 @@ pub fn handle_input_mode_input(input: &mut Vec<i32>, state: &State, tx: &mpsc::S
 	&[.., 27] | &[.., 3] => {
 	    input.drain(..);
 	    Some(Message::SetMode(Mode::Normal))
+	}
+	&[.., 127] => {
+	    input.resize_with(
+		input.len().saturating_sub(2),
+		Default::default
+	    );
+	    None
 	}
 	_ => None,
     };

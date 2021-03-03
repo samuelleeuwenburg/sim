@@ -56,10 +56,9 @@ pub fn draw(window: &WindowState, state: &State, input: &Vec<i32>) {
 }
 
 fn draw_input_mode(window: &WindowState, input: &Vec<i32>, mode: &state::Mode) {
-    let readable: String = input.iter()
-	.map(|&c| c as u8 as char)
-	.into_iter()
-	.collect();
+    let readable: String = input.iter().map(|&c| c as u8 as char).collect();
+
+    mvprintw(0, 0, &format!("input: {:?}", input));
 
     match mode {
 	state::Mode::Normal => mvprintw(window.height - 1, 0, &format!("normal {}", readable)),
