@@ -14,7 +14,8 @@ use cpal::traits::StreamTrait;
 
 use crate::device::get_device;
 use crate::stream::Stream;
-use crate::state::{State, Message, handle_message, handle_input};
+use crate::state::{State, Message, handle_message};
+use crate::ui::state::{handle_input, InputState};
 
 fn main() {
     let buffer_size = 1024;
@@ -66,7 +67,7 @@ fn main() {
     let ui_thread = thread::spawn(move || {
 	let window_state = ui::setup();
 
-	let mut input_state = state::InputState::new();
+	let mut input_state = InputState::new();
 
 	loop {
 	    thread::sleep(time::Duration::from_millis(16));

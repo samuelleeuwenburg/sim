@@ -1,7 +1,8 @@
 extern crate ncurses;
 
-use std::sync::mpsc;
-use crate::state;
+pub mod state;
+
+use crate::state::{State, Mode};
 use ncurses::*;
 
 pub struct WindowState {
@@ -30,7 +31,7 @@ pub fn setup() -> WindowState {
     state
 }
 
-pub fn get_input(state: &state::State) -> Vec<i32> {
+pub fn get_input(state: &State) -> Vec<i32> {
     let mut keys = vec![];
 
     let mut key = getch();
@@ -42,7 +43,7 @@ pub fn get_input(state: &state::State) -> Vec<i32> {
     keys
 }
 
-pub fn draw(window: &WindowState, state: &state::State, input_state: &state::InputState) {
+pub fn draw(window: &WindowState, state: &State, input_state: &state::InputState) {
     clear();
 
     let (x, y) = state.cursor_pos;
@@ -63,14 +64,14 @@ fn draw_user_message(window: &WindowState, input_state: &state::InputState) {
     }
 }
 
-fn draw_input_mode(window: &WindowState, input_state: &state::InputState, mode: &state::Mode) {
+fn draw_input_mode(window: &WindowState, input_state: &state::InputState, mode: &Mode) {
     let readable: String = input_state.input_buffer.iter().map(|&c| c as u8 as char).collect();
 
     mvprintw(0, 0, &format!("input: {:?}", input_state.input_buffer));
 
     match mode {
-	state::Mode::Normal => mvprintw(window.height - 1, 0, &format!("normal {}", readable)),
-	state::Mode::Input => mvprintw(window.height - 1, 0, &format!(":{}", readable)),
+	Mode::Normal => mvprintw(window.height - 1, 0, &format!("normal {}", readable)),
+	Mode::Input => mvprintw(window.height - 1, 0, &format!(":{}", readable)),
     };
 }
 
