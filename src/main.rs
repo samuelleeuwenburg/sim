@@ -30,8 +30,6 @@ fn main() {
     device_stream.play().unwrap();
 
     let (tx_msg, rx_msg) = mpsc::channel::<Message>();
-    let (tx_audio_quit, rx_audio_quit) = mpsc::channel::<()>();
-    let (tx_ui_quit, rx_ui_quit) = mpsc::channel::<()>();
 
     let audio_thread = thread::spawn(move || {
 	loop {
@@ -58,7 +56,8 @@ fn main() {
 		buffer.samples.append(&mut new_stream.samples);
 	    }
 
-	    if let Ok(_) = rx_audio_quit.try_recv() {
+	    let state = state_audio.lock().unwrap();
+	    if state.flags.iter().any(|f| f == &state::Flag::Quit) {
 		break;
 	    }
 	}
@@ -67,20 +66,20 @@ fn main() {
     let ui_thread = thread::spawn(move || {
 	let window_state = ui::setup();
 
-	let mut input = vec![];
+	let mut input_state = state::InputState::new();
 
 	loop {
 	    thread::sleep(time::Duration::from_millis(16));
 
 	    let state = state_ui.lock().unwrap();
 
-	    input.append(&mut ui::get_input(&state));
+	    input_state.input_buffer.append(&mut ui::get_input(&state));
 
-	    handle_input(&mut input, &state, &tx_msg);
+	    handle_input(&mut input_state, &state, &tx_msg).expect("error on handling message");
 
-	    ui::draw(&window_state, &state, &input);
+	    ui::draw(&window_state, &state, &input_state);
 
-	    if let Ok(_) = rx_ui_quit.try_recv() {
+	    if state.flags.iter().any(|f| f == &state::Flag::Quit) {
 		break;
 	    }
 	}
@@ -92,13 +91,13 @@ fn main() {
     let message_thread = thread::spawn(move || {
 	loop {
 	    match rx_msg.recv() {
-		Ok(Message::Quit) => {
-		    tx_audio_quit.send(()).unwrap();
-		    tx_ui_quit.send(()).unwrap();
-		    break;
-		},
 		Ok(msg) => handle_message(msg, &state),
 		Err(_) => (),
+	    }
+
+	    let state = state.lock().unwrap();
+	    if state.flags.iter().any(|f| f == &state::Flag::Quit) {
+		break;
 	    }
 	}
     });

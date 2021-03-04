@@ -2,7 +2,6 @@ extern crate ncurses;
 
 use std::sync::mpsc;
 use crate::state;
-use crate::state::State;
 use ncurses::*;
 
 pub struct WindowState {
@@ -31,7 +30,7 @@ pub fn setup() -> WindowState {
     state
 }
 
-pub fn get_input(state: &State) -> Vec<i32> {
+pub fn get_input(state: &state::State) -> Vec<i32> {
     let mut keys = vec![];
 
     let mut key = getch();
@@ -43,22 +42,31 @@ pub fn get_input(state: &State) -> Vec<i32> {
     keys
 }
 
-pub fn draw(window: &WindowState, state: &State, input: &Vec<i32>) {
+pub fn draw(window: &WindowState, state: &state::State, input_state: &state::InputState) {
     clear();
 
     let (x, y) = state.cursor_pos;
 
     mvprintw(y, x, "X");
 
-    draw_input_mode(window, input, &state.mode);
+    draw_user_message(window, input_state);
+    draw_input_mode(window, input_state, &state.mode);
 
     refresh();
 }
 
-fn draw_input_mode(window: &WindowState, input: &Vec<i32>, mode: &state::Mode) {
-    let readable: String = input.iter().map(|&c| c as u8 as char).collect();
+fn draw_user_message(window: &WindowState, input_state: &state::InputState) {
+    if let Some(msg) = &input_state.user_message {
+	let mut message = String::from("> ");
+	message.push_str(&msg);
+	mvprintw(window.height - 2, 0, &message);
+    }
+}
 
-    mvprintw(0, 0, &format!("input: {:?}", input));
+fn draw_input_mode(window: &WindowState, input_state: &state::InputState, mode: &state::Mode) {
+    let readable: String = input_state.input_buffer.iter().map(|&c| c as u8 as char).collect();
+
+    mvprintw(0, 0, &format!("input: {:?}", input_state.input_buffer));
 
     match mode {
 	state::Mode::Normal => mvprintw(window.height - 1, 0, &format!("normal {}", readable)),
