@@ -27,6 +27,7 @@ pub struct State {
     pub tracks: Vec<Track>,
     pub mode: Mode,
     pub flags: Vec<Flag>,
+    pub error_message: Option<String>,
 }
 
 impl State {
@@ -40,6 +41,7 @@ impl State {
 	    tracks: vec![],
 	    mode: Mode::Normal,
 	    flags: vec![],
+	    error_message: None,
 	}
     }
 }
@@ -96,9 +98,17 @@ pub fn handle_arg_command(command: &ArgCommand, input: &Vec<i32>, state: &Arc<Mu
 		Ok(track) => {
 		    let mut state = state.lock().unwrap();
 		    let buffer_size = state.buffer_size;
-		    state.tracks.push(track.set_buffer_size(buffer_size));
+
+		    let track = track
+			.set_buffer_size(buffer_size)
+			.set_position(state.cursor_pos);
+
+		    state.tracks.push(track);
 		}
-		Err(e) => println!("{}", e),
+		Err(e) => {
+		    let mut state = state.lock().unwrap();
+		    state.error_message = Some(e.to_string());
+		}
 	    }
 	}
     }

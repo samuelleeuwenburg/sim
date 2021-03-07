@@ -19,46 +19,9 @@ pub enum ArgCommand {
 }
 
 impl ArgCommand {
-    pub fn get_user_message(&self, input: &[i32]) -> String {
+    pub fn get_user_message(&self) -> String {
 	match self {
-	    ArgCommand::AddTrack => {
-		// @TODO: turn into re-usable struct
-		let args = vec!["path", " title"];
-
-		let input = input
-		    .into_iter()
-		    .map(|&c| c as u8 as char)
-		    .collect::<String>();
-
-		let input_args: Vec<&str> = input.split(":").collect();
-
-		let mut msg = String::from("");
-
-		for (i, arg) in args.into_iter().enumerate() {
-		    let input = input_args.get(i);
-		    let mut message = arg.to_owned();
-
-		    let string = match input {
-			Some(&"") | None => {
-			    message.push_str("[!]");
-			    message
-			}
-			Some(input) => {
-			    message.push_str("[g]");
-
-			    let length = if input.len() > message.len() { input.len() - message.len() } else { 0 };
-			    let whitespace: String = vec![" "; length].into_iter().collect();
-			    message.push_str(&whitespace);
-
-			    message
-			}
-		    };
-
-		    msg.push_str(string.as_str());
-		}
-
-		msg
-	    }
+	    ArgCommand::AddTrack => "path to file".to_string(),
 	}
     }
 }
@@ -75,12 +38,6 @@ impl TryFrom<&[i32]> for Command {
 	    _ => Err(format!("unknown command: {:?}", input).to_owned()),
 	}
     }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Arg {
-    Path(String),
-    Title(String),
 }
 
 #[derive(Debug)]
@@ -113,14 +70,13 @@ fn get_multiplier(input: &[i32]) -> Result<i32, String> {
 
 pub fn handle_input(input_state: &mut InputState, state: &State, tx: &mpsc::Sender<Message>) -> Result<(), String> {
     match state.mode {
-	Mode::Normal => handle_input_mode_normal(input_state, &state, tx),
-	Mode::Input => handle_input_mode_input(input_state, &state, tx),
+	Mode::Normal => handle_input_mode_normal(input_state, tx),
+	Mode::Input => handle_input_mode_input(input_state, tx),
     }
 }
 
 pub fn handle_input_mode_normal(
     input_state: &mut InputState,
-    state: &State,
     tx: &mpsc::Sender<Message>
 ) -> Result<(), String> {
     let input = &mut input_state.input_buffer;
@@ -153,15 +109,8 @@ pub fn handle_input_mode_normal(
 
 pub fn handle_input_mode_input(
     input_state: &mut InputState,
-    state: &State,
     tx: &mpsc::Sender<Message>
 ) -> Result<(), String> {
-    // if let Some(command @ Command::Arg(_)) = &input_state.command {
-    // 	let input = &mut input_state.input_buffer;
-    // 	input_state.user_message = Some(command.get_user_message(&input[..]));
-    // };
-
-    
     let msg = match input_state.input_buffer.as_slice() {
 	&[.., 27] | &[.., 3] => {
 	    input_state.reset();
@@ -175,53 +124,36 @@ pub fn handle_input_mode_input(
 	    None
 	}
 	&[.., 10] => {
-	    // if let Some(command) = &input_state.active_command {
-	    // 	let msg = Message::RunCommand(command.clone(), input_state.input_buffer.clone());
-	    // 	input_state.reset();
-	    // 	Some(msg)
-	    // } else {
+	    if let Some(command) = &input_state.active_command {
+		let mut input = input_state.input_buffer.clone();
+		input.drain(input.len() - 1..);
+	    	let msg = Message::RunCommand(command.clone(), input);
+	    	input_state.reset();
+	    	Some(msg)
 
-	    let input = &mut input_state.input_buffer;
-	    let command: Result<Command, String> = input[..input.len() - 1].try_into();
+	    } else {
+		let input = &mut input_state.input_buffer;
+		let command: Result<Command, String> = input[..input.len() - 1].try_into();
 
-	    match command {
-		Ok(Command::Simple(command)) => {
-		    Some(Message::RunSimpleCommand(command.clone()))
-		}
-		Ok(Command::Arg(command)) => {
-		    let message = command.get_user_message(&input[..input.len() - 1]);
-		    input_state.active_command = Some(command);
-		    input.drain(..);
-		    input_state.user_message = Some(message);
-		    None
-		}
-		Err(_) => {
-		    input_state.reset();
-		    let message = "uknown command".to_owned();
-		    input_state.user_message = Some(message);
-		    Some(Message::SetMode(Mode::Normal))
+		match command {
+		    Ok(Command::Simple(command)) => {
+			Some(Message::RunSimpleCommand(command.clone()))
+		    }
+		    Ok(Command::Arg(command)) => {
+			let message = command.get_user_message();
+			input_state.active_command = Some(command);
+			input.drain(..);
+			input_state.user_message = Some(message);
+			None
+		    }
+		    Err(_) => {
+			input_state.reset();
+			let message = "uknown command".to_owned();
+			input_state.user_message = Some(message);
+			Some(Message::SetMode(Mode::Normal))
+		    }
 		}
 	    }
-		// if let Ok(cmd @ Command::Simple(_)) = command {
-		//     Some(Message::RunCommand(cmd.clone(), input_state.input_buffer.clone()))
-		// } else {
-		//     match command {
-		// 	Ok(command) => {
-		// 	    let message = command.get_user_message(&input[..input.len() - 1]);
-		// 	    input_state.command = Some(command);
-		// 	    input.drain(..);
-		// 	    input_state.user_message = Some(message);
-		// 	    None
-		// 	},
-		// 	Err(_) => {
-		// 	    input_state.reset();
-		// 	    let message = "uknown command".to_owned();
-		// 	    input_state.user_message = Some(message);
-		// 	    Some(Message::SetMode(Mode::Normal))
-		// 	}
-		//     }
-		// }
-	    // }
 	}
 	_ => None,
     };

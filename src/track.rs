@@ -10,11 +10,16 @@ use crate::wave::{parse_wave, Wave};
 pub struct Track {
     pub sample: Option<Sample>,
     pub buffer: Stream,
+    pub position: (i32, i32),
 }
 
 impl Track {
     pub fn new(channels: usize) -> Self {
-	Track { sample: None, buffer: Stream::empty(0, channels) }
+	Track {
+	    sample: None,
+	    buffer: Stream::empty(0, channels),
+	    position: (0, 0)
+	}
     }
 
     pub fn set_buffer_size(mut self, buffer_size: usize) -> Self {
@@ -25,6 +30,11 @@ impl Track {
 
     pub fn add_sample(mut self, sample: Sample) -> Self {
 	self.sample = Some(sample);
+	self
+    }
+
+    pub fn set_position(mut self, position: (i32, i32)) -> Self {
+	self.position = position;
 	self
     }
 }

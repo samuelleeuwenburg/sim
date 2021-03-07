@@ -38,12 +38,10 @@ pub fn get_device(
 
     let cpal_stream = match sample_format {
         SampleFormat::F32 => {
-            println!("using f32 stream");
-
             cpal_device.build_output_stream(
                 &config,
                 move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-		    let buffer = buffer_clone.lock().unwrap();
+		    let buffer = buffer_clone.lock().expect("can't read buffer mutex");
 
 		    if data.len() > buffer.samples.len() {
 			println!(
@@ -61,7 +59,10 @@ pub fn get_device(
 			    *sample = Sample::from(v);
 			}
 
-			tx_buffer_read.send(data.len()).unwrap();
+			match tx_buffer_read.send(data.len()) {
+			    Ok(()) => (),
+			    Err(e) => println!("can't send bytes read to main channel: {}", e),
+			}
 		    }
                 },
                 err_fn

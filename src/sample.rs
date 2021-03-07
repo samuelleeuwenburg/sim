@@ -14,8 +14,8 @@ enum PlayStyle {
 pub struct Sample {
     pub name: String,
     pub buffer: Stream,
-    stream: Stream,
-    position: usize,
+    pub stream: Stream,
+    pub position: usize,
     speed: f64,
     play_style: PlayStyle,
 }

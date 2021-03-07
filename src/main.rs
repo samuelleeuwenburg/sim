@@ -66,16 +66,14 @@ fn main() {
 
     let ui_thread = thread::spawn(move || {
 	let window_state = ui::setup();
-
 	let mut input_state = InputState::new();
 
 	loop {
 	    thread::sleep(time::Duration::from_millis(16));
 
 	    let state = state_ui.lock().unwrap();
-
-	    input_state.input_buffer.append(&mut ui::get_input(&state));
-
+	    let mut input = ui::get_input();
+	    input_state.input_buffer.append(&mut input);
 	    handle_input(&mut input_state, &state, &tx_msg).expect("error on handling message");
 
 	    ui::draw(&window_state, &state, &input_state);
