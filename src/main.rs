@@ -1,20 +1,20 @@
 mod device;
 mod sample;
+mod state;
 mod stream;
+mod track;
 mod ui;
 mod wave;
-mod track;
-mod state;
 
+use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time;
-use std::sync::{Arc, Mutex, mpsc};
 
 use cpal::traits::StreamTrait;
 
 use crate::device::get_device;
+use crate::state::{handle_message, Message, State};
 use crate::stream::Stream;
-use crate::state::{State, Message, handle_message};
 use crate::ui::state::{handle_input, InputState};
 
 fn main() {
@@ -33,72 +33,70 @@ fn main() {
     let (tx_msg, rx_msg) = mpsc::channel::<Message>();
 
     let audio_thread = thread::spawn(move || {
-	loop {
-	    let used_samples = rx_buffer.recv().unwrap();
-	    let mut buffer = buffer.lock().unwrap();
+        loop {
+            let used_samples = rx_buffer.recv().unwrap();
+            let mut buffer = buffer.lock().unwrap();
 
-	    // remove read samples
-	    buffer.samples.drain(..used_samples);
+            // remove read samples
+            buffer.samples.drain(..used_samples);
 
-	    if buffer.samples.len() < buffer_size {
-		let mut streams = vec![];
-		let mut state = state_audio.lock().unwrap();
+            if buffer.samples.len() < buffer_size {
+                let mut streams = vec![];
+                let mut state = state_audio.lock().unwrap();
 
-		for track in state.tracks.iter_mut() {
-		    let buffer = track.play().unwrap();
-		    streams.push(buffer);
-		}
+                for track in state.tracks.iter_mut() {
+                    let buffer = track.play().unwrap();
+                    streams.push(buffer);
+                }
 
-		let mut new_stream = Stream::empty(buffer_size, channels);
-		new_stream.mix(&streams);
+                let mut new_stream = Stream::empty(buffer_size, channels);
+                new_stream.mix(&streams);
 
-		// add new samples
-		buffer.samples.append(&mut new_stream.samples);
-	    }
+                // add new samples
+                buffer.samples.append(&mut new_stream.samples);
+            }
 
-	    let state = state_audio.lock().unwrap();
-	    if state.flags.iter().any(|f| f == &state::Flag::Quit) {
-		break;
-	    }
-	}
+            let state = state_audio.lock().unwrap();
+            if state.flags.iter().any(|f| f == &state::Flag::Quit) {
+                break;
+            }
+        }
     });
 
     let ui_thread = thread::spawn(move || {
-	let window_state = ui::setup();
-	let mut input_state = InputState::new();
+        let window_state = ui::setup();
+        let mut input_state = InputState::new();
 
-	loop {
-	    thread::sleep(time::Duration::from_millis(16));
+        loop {
+            thread::sleep(time::Duration::from_millis(16));
 
-	    let state = state_ui.lock().unwrap();
-	    let mut input = ui::get_input();
+            let state = state_ui.lock().unwrap();
+            let mut input = ui::get_input();
 
-	    input_state.input_buffer.append(&mut input);
-	    handle_input(&mut input_state, &state, &tx_msg).expect("error on handling message");
+            input_state.input_buffer.append(&mut input);
+            handle_input(&mut input_state, &state, &tx_msg).expect("error on handling message");
 
-	    ui::draw(&window_state, &state, &input_state);
+            ui::draw(&window_state, &state, &input_state);
 
-	    if state.flags.iter().any(|f| f == &state::Flag::Quit) {
-		break;
-	    }
-	}
+            if state.flags.iter().any(|f| f == &state::Flag::Quit) {
+                break;
+            }
+        }
 
-	// clean up
-	ui::quit();
+        // clean up
+        ui::quit();
     });
 
-    let message_thread = thread::spawn(move || {
-	loop {
-	    match rx_msg.recv() {
-		Ok(msg) => handle_message(msg, &state),
-		Err(_) => (),
-	    }
+    let message_thread = thread::spawn(move || loop {
+        match rx_msg.recv() {
+            Ok(msg) => handle_message(msg, &state),
+            Err(_) => (),
+        }
 
-	    let state = state.lock().unwrap();
-	    if state.flags.iter().any(|f| f == &state::Flag::Quit) {
-		break;
-	    }
-	}
+        let state = state.lock().unwrap();
+        if state.flags.iter().any(|f| f == &state::Flag::Quit) {
+            break;
+        }
     });
 
     // await threads

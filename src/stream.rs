@@ -22,7 +22,10 @@ pub fn i32_to_point(n: i32) -> Point {
 
 impl Stream {
     pub fn empty(size: BufferSize, channels: usize) -> Self {
-        Stream { samples: vec![0.0; size], channels }
+        Stream {
+            samples: vec![0.0; size],
+            channels,
+        }
     }
 
     pub fn from_samples(samples: Vec<Point>, channels: usize) -> Self {
@@ -31,7 +34,9 @@ impl Stream {
 
     pub fn mix(&mut self, streams: &Vec<&Stream>) -> &mut Self {
         for (i, sample) in self.samples.iter_mut().enumerate() {
-            *sample = streams.iter().fold(sample.clone(), |xs, x| xs + x.samples.get(i).unwrap_or(&0.0));
+            *sample = streams.iter().fold(sample.clone(), |xs, x| {
+                xs + x.samples.get(i).unwrap_or(&0.0)
+            });
         }
 
         self
@@ -48,7 +53,6 @@ impl Stream {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     #![allow(overflowing_literals)]
@@ -59,13 +63,13 @@ mod tests {
         let samples = vec![-1.0, -0.5, 0.0, 0.5, 1.0];
         let streams = vec![];
         let mut stream = Stream::from_samples(samples, 1);
-	stream.mix(&streams);
+        stream.mix(&streams);
         assert_eq!(stream.samples, vec![-1.0, -0.5, 0.0, 0.5, 1.0]);
 
         let samples = vec![1.0, 0.2, 1.0, 1.0, 0.2];
         let streams = vec![Stream::from_samples(vec![0.0, 0.0, 0.0, 0.0, 0.0], 1)];
         let mut stream = Stream::from_samples(samples, 1);
-	stream.mix(&streams.iter().collect());
+        stream.mix(&streams.iter().collect());
         assert_eq!(stream.samples, vec![1.0, 0.2, 1.0, 1.0, 0.2]);
 
         let samples = vec![0.1, 0.0, -0.1, -0.2, -0.3];
@@ -74,7 +78,7 @@ mod tests {
             Stream::from_samples(vec![0.3, 0.2, 0.1, 0.0, -0.1], 1),
         ];
         let mut stream = Stream::from_samples(samples, 1);
-	stream.mix(&streams.iter().collect());
+        stream.mix(&streams.iter().collect());
         assert_eq!(stream.samples, vec![0.6, 0.3, 0.0, -0.3, -0.6]);
 
         let samples = vec![0.1, 0.0, -0.1, -0.2, -0.3];
@@ -83,34 +87,45 @@ mod tests {
             Stream::from_samples(vec![0.3], 1),
         ];
         let mut stream = Stream::from_samples(samples, 1);
-	stream.mix(&streams.iter().collect());
+        stream.mix(&streams.iter().collect());
         assert_eq!(stream.samples, vec![0.6, 0.1, -0.1, -0.2, -0.3]);
     }
 
     #[test]
     fn test_amplify() {
         let mut stream = Stream::empty(1, 1);
-	stream._amplify(6.0);
+        stream._amplify(6.0);
         assert_eq!(stream.samples, vec![0.0]);
 
         // 6 dBs should roughly double / half
         let mut stream = Stream::from_samples(vec![0.1, 0.25, 0.3, -0.1, -0.4], 1);
-	stream._amplify(6.0);
-        let rounded_samples: Vec<Point> = stream.samples.iter().map(|x| (x * 10.0).round() / 10.0).collect::<Vec<Point>>();
+        stream._amplify(6.0);
+        let rounded_samples: Vec<Point> = stream
+            .samples
+            .iter()
+            .map(|x| (x * 10.0).round() / 10.0)
+            .collect::<Vec<Point>>();
         assert_eq!(rounded_samples, vec![0.2, 0.5, 0.6, -0.2, -0.8]);
 
         let mut stream = Stream::from_samples(vec![0.4, 0.5, 0.8, -0.3, -0.6], 1);
-	stream._amplify(-6.0);
-        let rounded_samples: Vec<Point> = stream.samples.iter().map(|x| (x * 100.0).round() / 100.0).collect::<Vec<Point>>();
+        stream._amplify(-6.0);
+        let rounded_samples: Vec<Point> = stream
+            .samples
+            .iter()
+            .map(|x| (x * 100.0).round() / 100.0)
+            .collect::<Vec<Point>>();
         assert_eq!(rounded_samples, vec![0.2, 0.25, 0.4, -0.15, -0.3]);
 
         // clamp the value
         let mut stream = Stream::from_samples(vec![0.1, 0.4, 0.6, -0.2, -0.3, -0.5], 1);
-	stream._amplify(12.0);
-        let rounded_samples: Vec<Point> = stream.samples.iter().map(|x| (x * 100.0).round() / 100.0).collect::<Vec<Point>>();
+        stream._amplify(12.0);
+        let rounded_samples: Vec<Point> = stream
+            .samples
+            .iter()
+            .map(|x| (x * 100.0).round() / 100.0)
+            .collect::<Vec<Point>>();
         assert_eq!(rounded_samples, vec![0.4, 1.0, 1.0, -0.8, -1.0, -1.0]);
     }
-
 
     #[test]
     fn test_u8_to_point() {

@@ -1,5 +1,5 @@
-use std::convert::TryInto;
 use std::array::TryFromSliceError;
+use std::convert::TryInto;
 
 #[derive(Debug, PartialEq)]
 enum ChunkID {
@@ -31,7 +31,7 @@ pub struct Wave {
     pub data: Samples,
 }
 
-fn parse_chunk_id(id: [u8;4]) -> Result<ChunkID, &'static str> {
+fn parse_chunk_id(id: [u8; 4]) -> Result<ChunkID, &'static str> {
     match id {
         [b'R', b'I', b'F', b'F'] => Ok(ChunkID::RIFF),
         [b'f', b'm', b't', b' '] => Ok(ChunkID::FMT),
@@ -58,10 +58,18 @@ fn parse_fmt_chunk(bytes: &[u8]) -> Result<WaveFormat, &'static str> {
         .map_err(|_| "can't read bits per sample")
         .map(|b| u16::from_le_bytes(b))?;
 
-    Ok(WaveFormat { num_channels, sample_rate, bit_depth })
+    Ok(WaveFormat {
+        num_channels,
+        sample_rate,
+        bit_depth,
+    })
 }
 
-fn read_samples<T, F: Fn(&[u8]) -> Result<T, TryFromSliceError>>(format: &WaveFormat, bytes: &[u8], read_sample: F) -> Result<Vec<T>, TryFromSliceError> {
+fn read_samples<T, F: Fn(&[u8]) -> Result<T, TryFromSliceError>>(
+    format: &WaveFormat,
+    bytes: &[u8],
+    read_sample: F,
+) -> Result<Vec<T>, TryFromSliceError> {
     let num_bytes = (format.bit_depth / 8) as usize;
     let mut pos = 0;
     let mut samples = vec![];
@@ -82,20 +90,32 @@ fn read_samples<T, F: Fn(&[u8]) -> Result<T, TryFromSliceError>>(format: &WaveFo
 fn parse_data_chunk(format: &WaveFormat, bytes: &[u8]) -> Result<Samples, &'static str> {
     match format.bit_depth {
         8 => {
-            let samples = read_samples(&format, bytes, |b| b.try_into().map(|b| u8::from_le_bytes(b)));
-            samples.map_err(|_| "couldnt parse samples").map(|s| Samples::BitDepth8(s))
+            let samples = read_samples(&format, bytes, |b| {
+                b.try_into().map(|b| u8::from_le_bytes(b))
+            });
+            samples
+                .map_err(|_| "couldnt parse samples")
+                .map(|s| Samples::BitDepth8(s))
         }
         16 => {
-            let samples = read_samples(&format, bytes, |b| b.try_into().map(|b| i16::from_le_bytes(b)));
-            samples.map_err(|_| "couldnt parse samples").map(|s| Samples::BitDepth16(s))
+            let samples = read_samples(&format, bytes, |b| {
+                b.try_into().map(|b| i16::from_le_bytes(b))
+            });
+            samples
+                .map_err(|_| "couldnt parse samples")
+                .map(|s| Samples::BitDepth16(s))
         }
         24 => {
-            let samples = read_samples(&format, bytes, |b| [0, b[0], b[1], b[2]][0..4].try_into().map(|b| i32::from_le_bytes(b)));
-            samples.map_err(|_| "couldnt parse samples").map(|s| Samples::BitDepth24(s))
+            let samples = read_samples(&format, bytes, |b| {
+                [0, b[0], b[1], b[2]][0..4]
+                    .try_into()
+                    .map(|b| i32::from_le_bytes(b))
+            });
+            samples
+                .map_err(|_| "couldnt parse samples")
+                .map(|s| Samples::BitDepth24(s))
         }
-        _ => {
-            Err("unsupported bit depth")
-        }
+        _ => Err("unsupported bit depth"),
     }
 }
 
@@ -133,7 +153,7 @@ fn parse_chunks(bytes: &[u8], name: &str) -> Result<Wave, &'static str> {
     }
 
     let wave = Wave {
-	name: String::from(name),
+        name: String::from(name),
         format: format?,
         data: data?,
     };
@@ -153,7 +173,7 @@ pub fn parse_wave(bytes: &[u8], name: &str) -> Result<Wave, &'static str> {
         .map(|b| u32::from_le_bytes(b))?;
 
     if riff != ChunkID::RIFF {
-        return Err("no RIFF chunk id found at the start of file")
+        return Err("no RIFF chunk id found at the start of file");
     }
 
     parse_chunks(&bytes[12..file_size as usize + 8], name)
@@ -170,16 +190,14 @@ mod tests {
             0x52, 0x49, 0x46, 0x46, // RIFF
             0x34, 0x00, 0x00, 0x00, // chunk size
             0x57, 0x41, 0x56, 0x45, // WAVE
-
             0x66, 0x6d, 0x74, 0x20, // fmt_
             0x10, 0x00, 0x00, 0x00, // chunk size
-            0x01, 0x00,             // audio format
-            0x02, 0x00,             // num channels
+            0x01, 0x00, // audio format
+            0x02, 0x00, // num channels
             0x22, 0x56, 0x00, 0x00, // sample rate
             0x88, 0x58, 0x01, 0x00, // byte rate
-            0x04, 0x00,             // block align
-            0x10, 0x00,             // bits per sample
-
+            0x04, 0x00, // block align
+            0x10, 0x00, // bits per sample
             0x64, 0x61, 0x74, 0x61, // data
             0x10, 0x00, 0x00, 0x00, // chunk size
             0x00, 0x00, 0x00, 0x00, // sample 1 L+R
@@ -195,12 +213,15 @@ mod tests {
         assert_eq!(wave.format.num_channels, 2);
         assert_eq!(wave.name, "foo");
 
-        assert_eq!(wave.data, Samples::BitDepth16(vec![
-            0x0000, 0x0000, // sample 1 L+R
-            0x1724, 0xf31e, // sample 2 L+R
-            0x133c, 0x143c, // sample 3 L+R
-            0xf916, 0xf918, // sample 4 L+R
-        ]));
+        assert_eq!(
+            wave.data,
+            Samples::BitDepth16(vec![
+                0x0000, 0x0000, // sample 1 L+R
+                0x1724, 0xf31e, // sample 2 L+R
+                0x133c, 0x143c, // sample 3 L+R
+                0xf916, 0xf918, // sample 4 L+R
+            ])
+        );
     }
 
     #[test]
@@ -209,22 +230,20 @@ mod tests {
             0x52, 0x49, 0x46, 0x46, // RIFF
             0x30, 0x00, 0x00, 0x00, // chunk size
             0x57, 0x41, 0x56, 0x45, // WAVE
-
             0x66, 0x6d, 0x74, 0x20, // fmt_
             0x10, 0x00, 0x00, 0x00, // chunk size
-            0x01, 0x00,             // audio format
-            0x01, 0x00,             // num channels
+            0x01, 0x00, // audio format
+            0x01, 0x00, // num channels
             0x44, 0xac, 0x00, 0x00, // sample rate
             0x88, 0x58, 0x01, 0x00, // byte rate
-            0x04, 0x00,             // block align
-            0x18, 0x00,             // bits per sample
-
+            0x04, 0x00, // block align
+            0x18, 0x00, // bits per sample
             0x64, 0x61, 0x74, 0x61, // data
             0x0c, 0x00, 0x00, 0x00, // chunk size
-            0x00, 0x00, 0x00,       // sample 1
-            0x00, 0x24, 0x17,       // sample 2
-            0x1e, 0xf3, 0x3c,       // sample 3
-            0x13, 0x3c, 0x14,       // sample 4
+            0x00, 0x00, 0x00, // sample 1
+            0x00, 0x24, 0x17, // sample 2
+            0x1e, 0xf3, 0x3c, // sample 3
+            0x13, 0x3c, 0x14, // sample 4
         ];
 
         let wave = parse_wave(&bytes, "foo").unwrap();
@@ -233,12 +252,14 @@ mod tests {
         assert_eq!(wave.format.bit_depth, 24);
         assert_eq!(wave.format.num_channels, 1);
 
-        assert_eq!(wave.data, Samples::BitDepth24(vec![
-            0x00000000, // sample 1
-            0x17240000, // sample 2
-            0x3cf31e00, // sample 3
-            0x143c1300, // sample 4
-        ]));
+        assert_eq!(
+            wave.data,
+            Samples::BitDepth24(vec![
+                0x00000000, // sample 1
+                0x17240000, // sample 2
+                0x3cf31e00, // sample 3
+                0x143c1300, // sample 4
+            ])
+        );
     }
 }
-
