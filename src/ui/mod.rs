@@ -45,9 +45,8 @@ impl From<String> for View {
 }
 
 impl View {
-    fn set_bold(mut self) -> Self {
+    fn set_bold(&mut self) {
 	self.attributes.push(ViewAttribute::Bold);
-	self
     }
 }
 

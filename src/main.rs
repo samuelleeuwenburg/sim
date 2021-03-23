@@ -45,13 +45,12 @@ fn main() {
 		let mut state = state_audio.lock().unwrap();
 
 		for track in state.tracks.iter_mut() {
-		    let sample = track.sample.as_mut().unwrap();
-		    let buffer = sample.play().unwrap();
+		    let buffer = track.play().unwrap();
 		    streams.push(buffer);
 		}
 
-		let mut new_stream = Stream::empty(buffer_size, channels)
-		    .mix(&streams);
+		let mut new_stream = Stream::empty(buffer_size, channels);
+		new_stream.mix(&streams);
 
 		// add new samples
 		buffer.samples.append(&mut new_stream.samples);
@@ -73,6 +72,7 @@ fn main() {
 
 	    let state = state_ui.lock().unwrap();
 	    let mut input = ui::get_input();
+
 	    input_state.input_buffer.append(&mut input);
 	    handle_input(&mut input_state, &state, &tx_msg).expect("error on handling message");
 

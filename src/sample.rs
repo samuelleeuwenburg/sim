@@ -34,7 +34,7 @@ impl Sample {
         }
     }
 
-    pub fn set_buffer_size(mut self, buffer_size: usize) -> Self {
+    pub fn set_buffer_size(&mut self, buffer_size: usize) -> &mut Self {
 	self.buffer.samples.resize_with(buffer_size, Default::default);
 	self
     }
@@ -84,7 +84,8 @@ mod tests {
     #[test]
     fn test_play_loop_buffer_smaller_than_sample() {
         let stream = Stream::from_samples(vec![0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8], 1);
-	let mut sample = Sample::new("foo".to_owned(), stream).set_buffer_size(5);
+	let mut sample = Sample::new("foo".to_owned(), stream);
+	sample.set_buffer_size(5);
 
 	let buffer = sample.play().unwrap();
 	assert_eq!(buffer.samples, vec![0.0, 0.1, 0.2, 0.3, 0.4]);
@@ -99,7 +100,8 @@ mod tests {
     #[test]
     fn test_play_loop_buffer_larger_than_sample() {
         let stream = Stream::from_samples(vec![0.0, 0.1, 0.2, 0.3, 0.4], 1);
-	let mut sample = Sample::new("foo".to_owned(), stream).set_buffer_size(8);
+	let mut sample = Sample::new("foo".to_owned(), stream);
+	sample.set_buffer_size(8);
 
 	let buffer = sample.play().unwrap();
 	assert_eq!(buffer.samples, vec![0.0, 0.1, 0.2, 0.3, 0.4, 0.0, 0.1, 0.2]);
@@ -111,7 +113,8 @@ mod tests {
     #[test]
     fn test_play_oneshot() {
         let stream = Stream::from_samples(vec![0.0, 0.1, 0.2, 0.3, 0.4], 1);
-	let mut sample = Sample::new("foo".to_owned(), stream).set_buffer_size(8);
+	let mut sample = Sample::new("foo".to_owned(), stream);
+	sample.set_buffer_size(8);
 	sample.play_style = PlayStyle::OneShot;
 
 	let buffer = sample.play().unwrap();

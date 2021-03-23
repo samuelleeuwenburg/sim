@@ -99,9 +99,9 @@ pub fn handle_arg_command(command: &ArgCommand, input: &Vec<i32>, state: &Arc<Mu
 		    let mut state = state.lock().unwrap();
 		    let buffer_size = state.buffer_size;
 
-		    let track = track
-			.set_buffer_size(buffer_size)
-			.set_position(state.cursor_pos);
+		    let mut track = track;
+		    track.set_buffer_size(buffer_size);
+		    track.set_position(state.cursor_pos);
 
 		    state.tracks.push(track);
 		}
