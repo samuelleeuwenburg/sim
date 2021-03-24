@@ -2,6 +2,7 @@ use std::convert::TryInto;
 use std::sync::{Arc, Mutex};
 
 use crate::track::Track;
+use crate::traits::Playable;
 use crate::ui::state::{ArgCommand, SimpleCommand};
 
 #[derive(Debug)]
@@ -17,7 +18,6 @@ pub enum Flag {
 
 type Position = (i32, i32);
 
-#[derive(Debug)]
 pub struct State {
     pub buffer_size: usize,
     pub channels: usize,

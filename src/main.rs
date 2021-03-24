@@ -1,8 +1,10 @@
 mod device;
+mod effects;
 mod sample;
 mod state;
 mod stream;
 mod track;
+mod traits;
 mod ui;
 mod wave;
 
@@ -15,6 +17,7 @@ use cpal::traits::StreamTrait;
 use crate::device::get_device;
 use crate::state::{handle_message, Message, State};
 use crate::stream::Stream;
+use crate::traits::Playable;
 use crate::ui::state::{handle_input, InputState};
 
 fn main() {

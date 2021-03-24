@@ -3,10 +3,10 @@ use std::fs;
 use std::path::Path;
 
 use crate::sample::Sample;
-use crate::stream::Stream;
+use crate::stream::{Stream, StreamErr};
+use crate::traits::Playable;
 use crate::wave::{parse_wave, Wave};
 
-#[derive(Debug)]
 pub struct Track {
     pub sample: Option<Sample>,
     pub buffer: Stream,
@@ -22,22 +22,19 @@ impl Track {
         }
     }
 
-    pub fn set_buffer_size(&mut self, buffer_size: usize) -> &mut Self {
-        self.buffer
-            .samples
-            .resize_with(buffer_size, Default::default);
-        self.sample.as_mut().map(|s| s.set_buffer_size(buffer_size));
-        self
-    }
-
     pub fn add_sample(&mut self, sample: Sample) -> &mut Self {
         self.sample = Some(sample);
         self
     }
 
-    pub fn play(&mut self) -> Result<&Stream, String> {
-        let buffer_size = self.buffer.samples.len();
+    pub fn set_position(&mut self, position: (i32, i32)) -> &mut Self {
+        self.position = position;
+        self
+    }
+}
 
+impl Playable for Track {
+    fn play(&mut self) -> Result<&Stream, StreamErr> {
         let sample_stream = match self.sample.as_mut() {
             Some(sample) => Some(sample.play()?),
             None => None,
@@ -53,8 +50,11 @@ impl Track {
         Ok(&self.buffer)
     }
 
-    pub fn set_position(&mut self, position: (i32, i32)) -> &mut Self {
-        self.position = position;
+    fn set_buffer_size(&mut self, buffer_size: usize) -> &mut Self {
+        self.buffer
+            .samples
+            .resize_with(buffer_size, Default::default);
+        self.sample.as_mut().map(|s| s.set_buffer_size(buffer_size));
         self
     }
 }

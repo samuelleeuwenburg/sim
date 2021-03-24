@@ -1,7 +1,8 @@
 use std::convert::From;
 
 use crate::stream;
-use crate::stream::Stream;
+use crate::stream::{Stream, StreamErr};
+use crate::traits::Playable;
 use crate::wave::{Samples, Wave};
 
 #[derive(Debug)]
@@ -33,36 +34,23 @@ impl Sample {
             play_style: PlayStyle::Loop,
         }
     }
+}
 
-    pub fn set_buffer_size(&mut self, buffer_size: usize) -> &mut Self {
-        self.buffer
-            .samples
-            .resize_with(buffer_size, Default::default);
-        self
-    }
-
-    // fill buffer with new samples
-    pub fn play(&mut self) -> Result<&Stream, String> {
-        let sample_length = self.stream.samples.len();
+impl Playable for Sample {
+    fn play(&mut self) -> Result<&Stream, StreamErr> {
+        let sample_length = self.stream.len();
 
         for byte in self.buffer.samples.iter_mut() {
-            let value: Option<&f32> = match self.play_style {
-                PlayStyle::Loop => self.stream.samples.get(self.position),
+            *byte = match self.play_style {
+                PlayStyle::Loop => self.stream.get_sample(self.position)?,
                 PlayStyle::OneShot => {
                     if self.position >= sample_length {
-                        Some(&0.0)
+                        0.0
                     } else {
-                        self.stream.samples.get(self.position)
+                        self.stream.get_sample(self.position)?
                     }
                 }
             };
-
-            *byte = value
-                .ok_or(format!(
-                    "can't get sample for {} @ {}",
-                    self.name, self.position
-                ))?
-                .clone();
 
             self.position = match self.play_style {
                 PlayStyle::Loop => {
@@ -83,6 +71,13 @@ impl Sample {
         }
 
         Ok(&self.buffer)
+    }
+
+    fn set_buffer_size(&mut self, buffer_size: usize) -> &mut Self {
+        self.buffer
+            .samples
+            .resize_with(buffer_size, Default::default);
+        self
     }
 }
 

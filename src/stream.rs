@@ -2,6 +2,11 @@ pub type BufferSize = usize;
 
 pub type Point = f32;
 
+#[derive(Debug)]
+pub enum StreamErr {
+    NonExistentIndex(usize),
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct Stream {
     pub samples: Vec<Point>,
@@ -30,6 +35,17 @@ impl Stream {
 
     pub fn from_samples(samples: Vec<Point>, channels: usize) -> Self {
         Stream { samples, channels }
+    }
+
+    pub fn len(&self) -> usize {
+        self.samples.len()
+    }
+
+    pub fn get_sample(&self, position: usize) -> Result<f32, StreamErr> {
+        match self.samples.get(position) {
+            Some(&f) => Ok(f),
+            None => Err(StreamErr::NonExistentIndex(position)),
+        }
     }
 
     pub fn mix(&mut self, streams: &Vec<&Stream>) -> &mut Self {
