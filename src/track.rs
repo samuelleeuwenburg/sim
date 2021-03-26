@@ -1,11 +1,41 @@
 use std::convert::TryFrom;
+use std::error;
+use std::fmt;
 use std::fs;
+use std::io;
 use std::path::Path;
 
 use crate::sample::Sample;
 use crate::stream::{Stream, StreamErr};
 use crate::traits::Playable;
+use crate::wave;
 use crate::wave::{parse_wave, Wave};
+
+#[derive(Debug)]
+pub enum Error {
+    BadFile(io::Error),
+    CantParseFile(wave::Error),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl error::Error for Error {}
+
+impl From<wave::Error> for Error {
+    fn from(err: wave::Error) -> Self {
+        Error::CantParseFile(err)
+    }
+}
+
+impl From<io::Error> for Error {
+    fn from(err: io::Error) -> Self {
+        Error::BadFile(err)
+    }
+}
 
 pub struct Track {
     pub sample: Option<Sample>,
@@ -60,19 +90,18 @@ impl Playable for Track {
 }
 
 impl TryFrom<String> for Track {
-    type Error = String;
+    type Error = Error;
 
     fn try_from(p: String) -> Result<Self, Self::Error> {
         let path = Path::new(&p);
-        let file =
-            fs::read(path).map_err(|e| format!("can't read track \"{}\" from path: {:?}", p, e))?;
+        let file = fs::read(path)?;
+
         let name = path
             .file_name()
             .and_then(|osstr| osstr.to_str())
             .unwrap_or("<unnamed>");
 
-        let wave: Wave =
-            parse_wave(&file, &name).map_err(|e| format!("can't parse wave file: {}", e))?;
+        let wave: Wave = parse_wave(&file, &name)?;
         let sample: Sample = wave.into();
 
         let mut track = Track::new(sample.buffer.channels);

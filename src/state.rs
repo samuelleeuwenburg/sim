@@ -1,6 +1,7 @@
 use std::convert::TryInto;
 use std::sync::{Arc, Mutex};
 
+use crate::track;
 use crate::track::Track;
 use crate::traits::Playable;
 use crate::ui::state::{ArgCommand, SimpleCommand};
@@ -88,7 +89,7 @@ pub fn handle_arg_command(command: &ArgCommand, input: &Vec<i32>, state: &Arc<Mu
         ArgCommand::AddTrack => {
             let path: String = input.iter().map(|&c| c as u8 as char).collect();
 
-            let track: Result<Track, String> = path.to_owned().try_into();
+            let track: Result<Track, track::Error> = path.to_owned().try_into();
 
             match track {
                 Ok(track) => {
