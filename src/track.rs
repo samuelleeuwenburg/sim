@@ -4,17 +4,17 @@ use std::fmt;
 use std::fs;
 use std::io;
 use std::path::Path;
+use wavv;
+use wavv::Wave;
 
 use crate::sample::Sample;
 use crate::stream::{Stream, StreamErr};
 use crate::traits::Playable;
-use crate::wave;
-use crate::wave::{parse_wave, Wave};
 
 #[derive(Debug)]
 pub enum Error {
     BadFile(io::Error),
-    CantParseFile(wave::Error),
+    CantParseFile(wavv::Error),
 }
 
 impl fmt::Display for Error {
@@ -25,8 +25,8 @@ impl fmt::Display for Error {
 
 impl error::Error for Error {}
 
-impl From<wave::Error> for Error {
-    fn from(err: wave::Error) -> Self {
+impl From<wavv::Error> for Error {
+    fn from(err: wavv::Error) -> Self {
         Error::CantParseFile(err)
     }
 }
@@ -101,7 +101,7 @@ impl TryFrom<String> for Track {
             .and_then(|osstr| osstr.to_str())
             .unwrap_or("<unnamed>");
 
-        let wave: Wave = parse_wave(&file, &name)?;
+        let wave: Wave = Wave::from_bytes(&file)?;
         let sample: Sample = wave.into();
 
         let mut track = Track::new(sample.buffer.channels);

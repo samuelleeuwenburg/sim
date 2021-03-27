@@ -3,7 +3,7 @@ use std::convert::From;
 use crate::stream;
 use crate::stream::{Stream, StreamErr};
 use crate::traits::Playable;
-use crate::wave::{Samples, Wave};
+use wavv::{Samples, Wave};
 
 #[derive(Debug)]
 enum PlayStyle {
@@ -93,7 +93,7 @@ impl From<Wave> for Sample {
 
         let stream = Stream::from_samples(samples, num_channels);
 
-        Sample::new(wave.name.to_owned(), stream)
+        Sample::new("<unnamed>".to_owned(), stream)
     }
 }
 

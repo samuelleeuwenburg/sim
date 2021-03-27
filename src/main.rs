@@ -6,7 +6,6 @@ mod stream;
 mod track;
 mod traits;
 mod ui;
-mod wave;
 
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;

@@ -180,6 +180,7 @@ version = "0.1.0"
 dependencies = [
  "cpal",
  "ncurses",
+ "wavv",
 ]
 
 [[package]]
@@ -1346,6 +1347,12 @@ name = "wasm-bindgen-shared"
 version = "0.2.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7e7811dd7f9398f14cc76efd356f98f03aa30419dea46aa810d71e819fc97158"
+
+[[package]]
+name = "wavv"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6be1a10429493d345bf07565ae84b3b9d250a5aa035a128877003c0434481735"
 
 [[package]]
 name = "web-sys"
