@@ -9,4 +9,4 @@ edition = "2018"
 [dependencies]
 cpal = "0.13.1"
 ncurses = "5.101.0"
-wavv = "0.1.0"
+wavv = "0.1.2"

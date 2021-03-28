@@ -1350,9 +1350,9 @@ checksum = "7e7811dd7f9398f14cc76efd356f98f03aa30419dea46aa810d71e819fc97158"
 
 [[package]]
 name = "wavv"
-version = "0.1.0"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6be1a10429493d345bf07565ae84b3b9d250a5aa035a128877003c0434481735"
+checksum = "06189b7e0142fb624e14f763d0458f478285bc32b5aa182ce4be346869b14ae8"
 
 [[package]]
 name = "web-sys"

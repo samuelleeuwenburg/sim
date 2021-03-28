@@ -83,7 +83,7 @@ impl Playable for Sample {
 
 impl From<Wave> for Sample {
     fn from(wave: Wave) -> Self {
-        let num_channels = wave.format.num_channels as usize;
+        let num_channels = wave.header.num_channels as usize;
 
         let samples: Vec<f32> = match wave.data {
             Samples::BitDepth8(samples) => samples.into_iter().map(stream::u8_to_point).collect(),
