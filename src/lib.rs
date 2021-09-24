@@ -37,18 +37,31 @@ impl State {
 
         self.primary.sample(a)
     }
-
-    // fn get_sources(&self) -> Vec<&mut dyn Source> {
-
-    // 	a
-    // }
 }
 
-#[cfg(feature = "wee_alloc")]
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
 static mut STATE: Option<State> = None;
+
+#[wasm_bindgen]
+pub fn set_osc_output(shape: &str) {
+    let state = unsafe { STATE.as_mut().unwrap() };
+
+    for osc in state.oscillators.iter_mut() {
+        // skip LFOs
+        if osc.frequency < 50.0 {
+            continue;
+        }
+
+        if shape == "saw" {
+            osc.output_saw();
+        }
+        if shape == "square" {
+            osc.output_square(0.5);
+        }
+        if shape == "triangle" {
+            osc.output_triangle();
+        }
+    }
+}
 
 #[wasm_bindgen]
 pub fn request_animation_frame() {}
@@ -68,32 +81,28 @@ pub fn main_js() -> Result<(), JsValue> {
 
     console::log_1(&"Hello from init".into());
 
-    let mut state = State::new(4800, 48_000);
+    let mut state = State::new(48_000 / 10, 48_000);
     let mut track = Track::new(&mut state.primary);
     let mut lfo = Oscillator::new(&mut state.primary);
 
-    let count = 3;
+    let count = 200;
 
     for i in 0..count {
-	let mut osc = Oscillator::new(&mut state.primary);
-	osc.output_saw();
-	track.add_input(&osc);
+        let mut osc = Oscillator::new(&mut state.primary);
+        osc.output_saw();
+        osc.amplitude = 0.01;
+        track.add_input(&osc);
 
-	if i % 2 == 0 {
-	    osc.frequency = 440.0; // a
-	}
-	if i % 2 == 1 {
-	    osc.frequency = 523.2511; // c
-	}
-	if i % 2 == 2 {
-	    osc.frequency = 659.2551; // e
-	}
+        osc.frequency = 440.0; // a
 
-	state.oscillators.push(osc);
+        osc.frequency += (i % count) as f32 * 0.05;
+        osc.frequency /= 4.0;
+
+        state.oscillators.push(osc);
     }
 
-
-    lfo.frequency = 2.0;
+    lfo.frequency = 0.15;
+    lfo.amplitude = 0.1;
     lfo.output_triangle();
 
     track.set_panning_cv(&lfo);

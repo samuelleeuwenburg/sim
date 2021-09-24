@@ -1,5 +1,3 @@
-const ctx = new AudioContext();
-
 const queueBuffer = (ctx, size, when, samples) => {
   const buffer = ctx.createBuffer(2, 48000 * size, 48000);
 
@@ -43,15 +41,30 @@ const audio_tick = (sim, ctx, bufferSizeInSeconds, pos) => {
 
   setTimeout(() => {
     audio_tick(sim, ctx, bufferSizeInSeconds, new_pos);
-  }, 10);
+  }, 0);
 };
 
 const onLoad = (sim) => {
-  const bufferSizeInSeconds = 0.1;
-  let pos = ctx.currentTime + bufferSizeInSeconds;
+  document.querySelector("button#triangle").addEventListener("click", () => {
+    sim.set_osc_output("triangle");
+  });
+  document.querySelector("button#saw").addEventListener("click", () => {
+    sim.set_osc_output("saw");
+  });
+  document.querySelector("button#square").addEventListener("click", () => {
+    sim.set_osc_output("square");
+  });
 
-  ui_tick(sim);
-  audio_tick(sim, ctx, bufferSizeInSeconds, pos);
+  document.querySelector("button#start").addEventListener("click", () => {
+    const bufferSizeInSeconds = 0.1;
+    const ctx = new AudioContext();
+    const pos = ctx.currentTime + bufferSizeInSeconds;
+
+    ui_tick(sim);
+    audio_tick(sim, ctx, bufferSizeInSeconds, pos);
+
+    document.querySelector("button#start").remove();
+  });
 };
 
 // load wasm
