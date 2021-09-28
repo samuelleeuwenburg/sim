@@ -1,26 +1,25 @@
-use screech::oscillator::Oscillator;
-use screech::primary::{Error, Primary};
-use screech::track::Track;
+use screech::basic::{Oscillator, Track};
+use screech::core::Primary;
 use screech::traits::Source;
 use wasm_bindgen::prelude::*;
 use web_sys::console;
 
 struct State {
-    primary: Primary,
+    primary: Primary<4800>,
     oscillators: Vec<Oscillator>,
     tracks: Vec<Track>,
 }
 
 impl State {
-    fn new(buffer_size: usize, sample_rate: usize) -> Self {
+    fn new(sample_rate: usize) -> Self {
         State {
-            primary: Primary::new(buffer_size, sample_rate),
+            primary: Primary::new(sample_rate),
             oscillators: vec![],
             tracks: vec![],
         }
     }
 
-    fn sample(&mut self) -> Result<Vec<f32>, Error> {
+    fn sample(&mut self) -> Vec<f32> {
         let mut a: Vec<&mut dyn Source> = self
             .oscillators
             .iter_mut()
@@ -35,7 +34,7 @@ impl State {
 
         a.append(&mut b);
 
-        self.primary.sample(a)
+        self.primary.sample(a).unwrap()
     }
 }
 
@@ -69,7 +68,7 @@ pub fn request_animation_frame() {}
 #[wasm_bindgen]
 pub fn request_buffer() -> Vec<f32> {
     let state = unsafe { STATE.as_mut().unwrap() };
-    state.sample().unwrap()
+    state.sample()
 }
 
 #[wasm_bindgen(start)]
@@ -81,11 +80,11 @@ pub fn main_js() -> Result<(), JsValue> {
 
     console::log_1(&"Hello from init".into());
 
-    let mut state = State::new(48_000 / 10, 48_000);
+    let mut state = State::new(48_000);
     let mut track = Track::new(&mut state.primary);
     let mut lfo = Oscillator::new(&mut state.primary);
 
-    let count = 200;
+    let count = 60;
 
     for i in 0..count {
         let mut osc = Oscillator::new(&mut state.primary);
