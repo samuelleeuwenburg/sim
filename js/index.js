@@ -56,7 +56,7 @@ const onLoad = (sim) => {
   });
 
   document.querySelector("button#start").addEventListener("click", () => {
-    const bufferSizeInSeconds = 0.1;
+    const bufferSizeInSeconds = 0.05;
     const ctx = new AudioContext();
     const pos = ctx.currentTime + bufferSizeInSeconds;
 

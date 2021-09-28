@@ -5,7 +5,7 @@ use wasm_bindgen::prelude::*;
 use web_sys::console;
 
 struct State {
-    primary: Primary<4800>,
+    primary: Primary<2400>,
     oscillators: Vec<Oscillator>,
     tracks: Vec<Track>,
 }
