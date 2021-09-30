@@ -1,19 +1,24 @@
 use screech::basic::{Oscillator, Track};
-use screech::core::Primary;
+use screech::core::{BasicTracker, Primary};
 use screech::traits::Source;
 use wasm_bindgen::prelude::*;
-use web_sys::console;
+use wasm_bindgen::JsCast;
+use web_sys::{console, AudioBuffer, AudioContext, Window};
+
+const BUFFER_SIZE: usize = 480;
 
 struct State {
-    primary: Primary<2400>,
+    primary: Primary<BUFFER_SIZE>,
     oscillators: Vec<Oscillator>,
     tracks: Vec<Track>,
 }
 
 impl State {
     fn new(sample_rate: usize) -> Self {
+        let tracker = Box::new(BasicTracker::<256>::new());
+
         State {
-            primary: Primary::new(sample_rate),
+            primary: Primary::with_tracker(tracker, sample_rate),
             oscillators: vec![],
             tracks: vec![],
         }
@@ -38,38 +43,23 @@ impl State {
     }
 }
 
-static mut STATE: Option<State> = None;
+struct AudioState {
+    ctx: AudioContext,
+    buffer_position: f64,
+}
 
-#[wasm_bindgen]
-pub fn set_osc_output(shape: &str) {
-    let state = unsafe { STATE.as_mut().unwrap() };
-
-    for osc in state.oscillators.iter_mut() {
-        // skip LFOs
-        if osc.frequency < 50.0 {
-            continue;
-        }
-
-        if shape == "saw" {
-            osc.output_saw();
-        }
-        if shape == "square" {
-            osc.output_square(0.5);
-        }
-        if shape == "triangle" {
-            osc.output_triangle();
+impl AudioState {
+    fn new(ctx: AudioContext) -> Self {
+        let buffer_position = ctx.current_time();
+        AudioState {
+            ctx,
+            buffer_position,
         }
     }
 }
 
-#[wasm_bindgen]
-pub fn request_animation_frame() {}
-
-#[wasm_bindgen]
-pub fn request_buffer() -> Vec<f32> {
-    let state = unsafe { STATE.as_mut().unwrap() };
-    state.sample()
-}
+static mut STATE: Option<State> = None;
+static mut AUDIO_STATE: Option<AudioState> = None;
 
 #[wasm_bindgen(start)]
 pub fn main_js() -> Result<(), JsValue> {
@@ -78,39 +68,105 @@ pub fn main_js() -> Result<(), JsValue> {
     #[cfg(debug_assertions)]
     console_error_panic_hook::set_once();
 
-    console::log_1(&"Hello from init".into());
+    let window = web_sys::window().expect("no global `window` exists");
+    let audio_context = web_sys::AudioContext::new().expect("no audiocontext available");
 
+    // setup audio state
+    let audio_state = AudioState::new(audio_context);
+    unsafe { AUDIO_STATE = Some(audio_state) };
+
+    // setup main state
     let mut state = State::new(48_000);
-    let mut track = Track::new(&mut state.primary);
-    let mut lfo = Oscillator::new(&mut state.primary);
 
-    let count = 60;
+    let count = 100;
 
     for i in 0..count {
         let mut osc = Oscillator::new(&mut state.primary);
         osc.output_saw();
         osc.amplitude = 0.01;
-        track.add_input(&osc);
+        state.primary.add_monitor(&osc);
 
-        osc.frequency = 440.0; // a
+        osc.frequency = 110.0; // a
 
-        osc.frequency += (i % count) as f32 * 0.05;
-        osc.frequency /= 4.0;
+        osc.frequency += (i % count) as f32 * 0.01;
 
         state.oscillators.push(osc);
     }
 
-    lfo.frequency = 0.15;
-    lfo.amplitude = 0.1;
-    lfo.output_triangle();
-
-    track.set_panning_cv(&lfo);
-
-    state.primary.add_monitor(&track);
-    state.oscillators.push(lfo);
-    state.tracks.push(track);
-
     unsafe { STATE = Some(state) };
+
+    // setup ticks
+    setup_audio_tick(&window)?;
+
+    Ok(())
+}
+
+fn create_buffer(ctx: &AudioContext) -> Result<AudioBuffer, JsValue> {
+    let state = unsafe { STATE.as_mut().unwrap() };
+    let channels = 2;
+    let sample_rate = 48_000.0;
+    let samples = state.sample();
+
+    let mut left = [0.0; BUFFER_SIZE];
+    let mut right = [0.0; BUFFER_SIZE];
+
+    for (i, sample) in samples.into_iter().enumerate() {
+        if i % 2 != 0 {
+            left[i / 2] = sample;
+        } else {
+            right[(i + 1) / 2] = sample;
+        }
+    }
+
+    let buffer = ctx.create_buffer(channels, BUFFER_SIZE as u32, sample_rate)?;
+    buffer.copy_to_channel(&mut left, 0)?;
+    buffer.copy_to_channel(&mut right, 1)?;
+
+    Ok(buffer)
+}
+
+fn audio_tick() {
+    let window = web_sys::window().expect("no global `window` exists");
+    let performance = window
+        .performance()
+        .expect("performance should be available");
+
+    let mut audio_state = unsafe { AUDIO_STATE.as_mut().unwrap() };
+    let current_time = audio_state.ctx.current_time();
+    let buffer_size_in_s = BUFFER_SIZE as f64 / 48_000.0;
+
+    if current_time + buffer_size_in_s >= audio_state.buffer_position {
+        // set next buffer_position
+        audio_state.buffer_position += buffer_size_in_s;
+
+        let now = performance.now();
+
+        // get buffer and queue
+        let buffer = create_buffer(&audio_state.ctx).expect("could not create buffer");
+        let source = audio_state
+            .ctx
+            .create_buffer_source()
+            .expect("could not create source buffer");
+
+        source.set_buffer(Some(&buffer));
+        source
+            .connect_with_audio_node(&audio_state.ctx.destination())
+            .expect("can't connect source to destination");
+        source
+            .start_with_when(audio_state.buffer_position)
+            .expect("couldn't start audio");
+
+        console::log_1(&format!("wasm performance: {}ms", performance.now() - now).into());
+    }
+}
+
+fn setup_audio_tick(window: &Window) -> Result<(), JsValue> {
+    let cb = Closure::wrap(Box::new(audio_tick) as Box<dyn FnMut()>);
+
+    window
+        .set_interval_with_callback_and_timeout_and_arguments_0(cb.as_ref().unchecked_ref(), 0)?;
+
+    cb.forget();
 
     Ok(())
 }
