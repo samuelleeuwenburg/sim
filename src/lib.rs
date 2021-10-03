@@ -1,6 +1,8 @@
 use screech::basic::{Oscillator, Track};
 use screech::core::{BasicTracker, Primary};
 use screech::traits::Source;
+use std::cell::RefCell;
+use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{console, AudioBuffer, AudioContext, Window};
@@ -96,12 +98,19 @@ pub fn main_js() -> Result<(), JsValue> {
     unsafe { STATE = Some(state) };
 
     // setup ticks
-    setup_audio_tick(&window)?;
+    setup_ticks(&window)?;
 
     Ok(())
 }
 
 fn create_buffer(ctx: &AudioContext) -> Result<AudioBuffer, JsValue> {
+    let window = web_sys::window().expect("no global `window` exists");
+    let performance = window
+        .performance()
+        .expect("performance should be available");
+
+    let now = performance.now();
+
     let state = unsafe { STATE.as_mut().unwrap() };
     let channels = 2;
     let sample_rate = 48_000.0;
@@ -122,15 +131,11 @@ fn create_buffer(ctx: &AudioContext) -> Result<AudioBuffer, JsValue> {
     buffer.copy_to_channel(&mut left, 0)?;
     buffer.copy_to_channel(&mut right, 1)?;
 
+    console::log_1(&format!("wasm performance: {}ms", performance.now() - now).into());
     Ok(buffer)
 }
 
 fn audio_tick() {
-    let window = web_sys::window().expect("no global `window` exists");
-    let performance = window
-        .performance()
-        .expect("performance should be available");
-
     let mut audio_state = unsafe { AUDIO_STATE.as_mut().unwrap() };
     let current_time = audio_state.ctx.current_time();
     let buffer_size_in_s = BUFFER_SIZE as f64 / 48_000.0;
@@ -138,8 +143,6 @@ fn audio_tick() {
     if current_time + buffer_size_in_s >= audio_state.buffer_position {
         // set next buffer_position
         audio_state.buffer_position += buffer_size_in_s;
-
-        let now = performance.now();
 
         // get buffer and queue
         let buffer = create_buffer(&audio_state.ctx).expect("could not create buffer");
@@ -155,18 +158,39 @@ fn audio_tick() {
         source
             .start_with_when(audio_state.buffer_position)
             .expect("couldn't start audio");
-
-        console::log_1(&format!("wasm performance: {}ms", performance.now() - now).into());
     }
 }
 
-fn setup_audio_tick(window: &Window) -> Result<(), JsValue> {
-    let cb = Closure::wrap(Box::new(audio_tick) as Box<dyn FnMut()>);
+fn ui_tick() {
+    console::log_1(&format!("hello from ui!").into());
+}
+
+fn request_animation_frame(f: &Closure<dyn FnMut()>) {
+    let window = web_sys::window().expect("no global `window` exists");
 
     window
-        .set_interval_with_callback_and_timeout_and_arguments_0(cb.as_ref().unchecked_ref(), 0)?;
+        .request_animation_frame(f.as_ref().unchecked_ref())
+        .expect("should register `requestAnimationFrame` OK");
+}
 
-    cb.forget();
+fn setup_ticks(window: &Window) -> Result<(), JsValue> {
+    let audio_cb = Closure::wrap(Box::new(audio_tick) as Box<dyn FnMut()>);
+    let ui_f: Rc<RefCell<Option<Closure<dyn FnMut()>>>> = Rc::new(RefCell::new(None));
+    let ui_g = ui_f.clone();
+
+    *ui_g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
+        ui_tick();
+        request_animation_frame(ui_f.borrow().as_ref().unwrap());
+    }) as Box<dyn FnMut()>));
+
+    request_animation_frame(ui_g.borrow().as_ref().unwrap());
+
+    window.set_interval_with_callback_and_timeout_and_arguments_0(
+        audio_cb.as_ref().unchecked_ref(),
+        0,
+    )?;
+
+    audio_cb.forget();
 
     Ok(())
 }
