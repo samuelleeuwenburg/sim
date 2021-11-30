@@ -2,9 +2,10 @@ use screech::basic::Track;
 use screech::core::{BasicTracker, Primary};
 use screech::traits::Source;
 
-use super::grid::{GridEntity, GridPosition};
+use super::command::Command;
 use super::user_interface::UserInterface;
 use super::vco::VCO;
+use super::GridEntity;
 
 pub struct State<const BUFFER_SIZE: usize> {
     primary: Primary<BUFFER_SIZE>,
@@ -45,23 +46,31 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
         self.primary.sample(a).unwrap()
     }
 
+    pub fn process_commands(&mut self, commands: &[Command]) {
+        for command in commands {
+            self.process_command(command);
+        }
+    }
+
     pub fn process_command(&mut self, command: &Command) {
         match command {
             Command::Move(pos) => {
                 self.user_interface.cursor.add(&pos);
             }
 
-            Command::AddOscillator(pos) => {
+            Command::AddOscillator => {
+                let pos = self.user_interface.cursor;
                 let mut vco = VCO::new(&mut self.primary);
-                vco.set_position(&pos);
                 let f = 110.0 * self.freq_pos as f32;
 
+                vco.set_position(&pos);
                 vco.oscillator.output_saw();
                 vco.oscillator.amplitude = 0.1;
                 vco.oscillator.frequency = f;
 
                 self.primary.add_monitor(vco.oscillator.output);
                 self.oscillators.push(vco);
+
                 self.freq_pos = if self.freq_pos >= 16 {
                     1
                 } else {
@@ -69,7 +78,9 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
                 };
             }
 
-            Command::DeleteAt(position) => {
+            Command::DeleteOscillator => {
+                let position = self.user_interface.cursor;
+
                 let mut index = 0;
                 for vco in self.oscillators.iter() {
                     let pos = vco.get_position();
@@ -81,50 +92,7 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
                     index += 1;
                 }
             }
+            _ => (),
         }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum Command {
-    Move(GridPosition),
-    AddOscillator(GridPosition),
-    DeleteAt(GridPosition),
-}
-
-pub struct InputState {
-    pub input_buffer: Vec<u32>,
-    pub command_buffer: Vec<Command>,
-}
-
-impl InputState {
-    pub fn new() -> Self {
-        InputState {
-            input_buffer: Vec::with_capacity(10),
-            command_buffer: Vec::with_capacity(10),
-        }
-    }
-
-    pub fn process_input(&mut self, &pos: &GridPosition) -> Option<Command> {
-        let command = match self.input_buffer.as_slice() {
-            &[.., 27] | &[.., 17, 219] => {
-                self.input_buffer.clear();
-                None
-            }
-            &[72] | &[37] => Some(Command::Move(GridPosition::new(-1, 0))), // left
-            &[76] | &[39] => Some(Command::Move(GridPosition::new(1, 0))),  // right
-            &[75] | &[38] => Some(Command::Move(GridPosition::new(0, -1))), // up
-            &[74] | &[40] => Some(Command::Move(GridPosition::new(0, 1))),  // down
-
-            &[16, 79] => Some(Command::AddOscillator(pos)),
-            &[68, 68] => Some(Command::DeleteAt(pos)),
-            _ => None,
-        };
-
-        if command.is_some() {
-            self.input_buffer.clear();
-        }
-
-        command
     }
 }
