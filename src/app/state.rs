@@ -2,8 +2,8 @@ use screech::basic::Track;
 use screech::core::{BasicTracker, Primary};
 use screech::traits::Source;
 
-use super::command::Command;
-use super::user_interface::UserInterface;
+use super::message::Message;
+use super::user_interface::{Graphics, UserInterface};
 use super::vco::VCO;
 use super::GridEntity;
 
@@ -46,19 +46,34 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
         self.primary.sample(a).unwrap()
     }
 
-    pub fn process_commands(&mut self, commands: &[Command]) {
-        for command in commands {
-            self.process_command(command);
+    pub fn update_ui(&mut self) {
+        self.user_interface.display_entities.clear();
+
+        for osc in &self.oscillators {
+            self.user_interface.display_entities.push(osc.get_display());
         }
     }
 
-    pub fn process_command(&mut self, command: &Command) {
-        match command {
-            Command::Move(pos) => {
+    pub fn render_ui(&self, g: &dyn Graphics) {
+        self.user_interface.render(g)
+    }
+
+    pub fn process_messages(&mut self, messages: &[Message]) {
+        for message in messages {
+            self.process_message(message);
+        }
+    }
+
+    pub fn process_message(&mut self, message: &Message) {
+        match message {
+            Message::Input(input) => self.user_interface.input = input.clone(),
+            Message::ClearInput => self.user_interface.input.clear(),
+
+            Message::Move(pos) => {
                 self.user_interface.cursor.add(&pos);
             }
 
-            Command::AddOscillator => {
+            Message::AddOscillator => {
                 let pos = self.user_interface.cursor;
                 let mut vco = VCO::new(&mut self.primary);
                 let f = 110.0 * self.freq_pos as f32;
@@ -78,7 +93,7 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
                 };
             }
 
-            Command::DeleteOscillator => {
+            Message::DeleteOscillator => {
                 let position = self.user_interface.cursor;
 
                 let mut index = 0;
@@ -92,7 +107,6 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
                     index += 1;
                 }
             }
-            _ => (),
         }
     }
 }

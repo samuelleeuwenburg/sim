@@ -1,4 +1,5 @@
-use crate::app::grid::{GridEntity, GridPosition};
+use super::grid::{GridEntity, GridPosition};
+use super::user_interface::DisplayEntity;
 use screech::basic::Oscillator;
 use screech::traits::Tracker;
 
@@ -25,8 +26,8 @@ impl GridEntity for VCO {
         &self.grid_position
     }
 
-    fn get_display(&self) -> String {
-        String::from("O")
+    fn get_display(&self) -> DisplayEntity {
+        DisplayEntity { position: self.grid_position, text: String::from("O") }
     }
 
     fn get_prompt(&self) -> String {

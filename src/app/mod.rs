@@ -1,8 +1,8 @@
-mod command;
 mod grid;
 mod input_state;
+mod message;
 mod state;
-mod user_interface;
+pub mod user_interface;
 mod vco;
 
 pub use grid::GridEntity;

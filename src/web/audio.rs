@@ -1,17 +1,17 @@
 use wasm_bindgen::prelude::*;
 use web_sys::{AudioBuffer, AudioContext};
 
-pub struct Audio {
+pub struct WebAudio {
     pub ctx: AudioContext,
     pub buffer_position: f64,
     pub buffer_size: usize,
 }
 
-impl Audio {
+impl WebAudio {
     pub fn new(ctx: AudioContext, buffer_size: usize) -> Self {
         let buffer_position = ctx.current_time();
 
-        Audio {
+        WebAudio {
             ctx,
             buffer_position,
             buffer_size,

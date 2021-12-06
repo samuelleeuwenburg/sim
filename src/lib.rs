@@ -2,6 +2,7 @@ mod app;
 mod web;
 
 use app::{InputState, State};
+use web::{WebAudio, WebGraphics};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -13,8 +14,8 @@ use web_sys::{HtmlCanvasElement, KeyboardEvent, Window};
 const BUFFER_SIZE: usize = 4800;
 
 static mut STATE: Option<State<BUFFER_SIZE>> = None;
-static mut AUDIO: Option<web::Audio> = None;
-static mut GRAPHICS: Option<web::Graphics> = None;
+static mut AUDIO: Option<WebAudio> = None;
+static mut GRAPHICS: Option<WebGraphics> = None;
 static mut INPUT_STATE: Option<InputState> = None;
 
 #[wasm_bindgen(start)]
@@ -39,8 +40,8 @@ pub fn main_js() -> Result<(), JsValue> {
         .map_err(|_| ())
         .unwrap();
 
-    unsafe { GRAPHICS = Some(web::Graphics::new(canvas)) };
-    unsafe { AUDIO = Some(web::Audio::new(audio_context, BUFFER_SIZE)) };
+    unsafe { GRAPHICS = Some(WebGraphics::new(canvas)) };
+    unsafe { AUDIO = Some(WebAudio::new(audio_context, BUFFER_SIZE)) };
     unsafe { INPUT_STATE = Some(InputState::new()) };
     unsafe { STATE = Some(State::new(48_000)) };
 
@@ -61,7 +62,7 @@ fn audio_loop() {
     let audio_state = unsafe { AUDIO.as_mut().unwrap() };
 
     if audio_state.needs_new_buffer() {
-        // lock and collect samples from the main state
+        // @TODO: lock and collect samples from the main state
         let state = unsafe { STATE.as_mut().unwrap() };
         let samples = state.sample();
 
@@ -75,8 +76,8 @@ fn state_loop() {
     let state = unsafe { STATE.as_mut().unwrap() };
     let input_state = unsafe { INPUT_STATE.as_mut().unwrap() };
 
-    let commands = input_state.drain_commands();
-    state.process_commands(&commands);
+    let messages = input_state.drain_messages();
+    state.process_messages(&messages);
 }
 
 fn handle_input(event: KeyboardEvent) {
@@ -89,7 +90,8 @@ fn graphics_loop() {
     let graphics = unsafe { GRAPHICS.as_mut().unwrap() };
     let state = unsafe { STATE.as_mut().unwrap() };
 
-    graphics.render(&state.user_interface);
+    state.update_ui();
+    state.render_ui(graphics);
 }
 
 fn setup_callbacks(window: &Window) -> Result<(), JsValue> {
