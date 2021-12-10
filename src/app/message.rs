@@ -4,8 +4,10 @@ use super::grid::GridPosition;
 pub enum Message {
     Move(GridPosition),
     AddOscillator,
-    DeleteOscillator,
+    AddTrack,
+    DeleteEntity,
     ClearInput,
+    UpdatePrompt,
     Input(Vec<u32>),
 }
 
@@ -20,7 +22,8 @@ impl Message {
             &[74] | &[40] => Some(Message::Move(GridPosition::new(0, 1))),  // down
 
             &[16, 79] => Some(Message::AddOscillator),
-            &[68, 68] => Some(Message::DeleteOscillator),
+            &[16, 84] => Some(Message::AddTrack),
+            &[68, 68] => Some(Message::DeleteEntity),
 
             _ => Some(Message::Input(codes.into())),
         }

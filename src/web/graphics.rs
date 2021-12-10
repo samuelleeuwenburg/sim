@@ -16,8 +16,8 @@ impl WebGraphics {
             .dyn_into::<CanvasRenderingContext2d>()
             .unwrap();
 
-        canvas.set_width(800);
-        canvas.set_height(640);
+        canvas.set_width(1280 * 2);
+        canvas.set_height(720 * 2);
 
         WebGraphics { ctx, canvas }
     }
@@ -36,6 +36,7 @@ impl WebGraphics {
 impl Graphics for WebGraphics {
     fn draw_text(&self, color: Color, x: f32, y: f32, text: &str) {
         self.set_fill_style(&color);
+        self.ctx.set_font("70px monospace");
         self.ctx.fill_text(text, x as f64, y as f64).unwrap();
     }
 

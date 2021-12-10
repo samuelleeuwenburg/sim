@@ -3,7 +3,7 @@ mod input_state;
 mod message;
 mod state;
 pub mod user_interface;
-mod vco;
+mod entities;
 
 pub use grid::GridEntity;
 pub use input_state::InputState;
