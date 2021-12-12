@@ -27,11 +27,13 @@ impl GridEntity for VCO {
     }
 
     fn get_display(&self) -> DisplayEntity {
-        DisplayEntity { position: self.grid_position, text: String::from("o") }
+        DisplayEntity {
+            position: self.grid_position,
+            text: String::from("o"),
+        }
     }
 
     fn get_prompt(&self) -> String {
         format!("vco @ {} freq", self.oscillator.frequency)
     }
 }
-

@@ -1,4 +1,4 @@
-use super::grid::{Rect, GridPosition};
+use super::grid::{GridPosition, Rect};
 
 pub enum Color {
     RGB(u8, u8, u8),
@@ -28,7 +28,7 @@ pub struct UserInterface {
     pub grid_block_size: (f32, f32),
     pub prompt: String,
     pub display_entities: Vec<DisplayEntity>,
-    pub input: Vec<u32>,
+    pub input: String,
 }
 
 impl UserInterface {
@@ -38,7 +38,7 @@ impl UserInterface {
             grid: Rect::new(33, 17, GridPosition::new(0, 0)),
             grid_block_size: (42.0, 64.0),
             prompt: String::from(""),
-            input: vec![],
+            input: String::from(""),
             display_entities: vec![],
         }
     }
@@ -126,14 +126,7 @@ impl UserInterface {
         let (x, y) = self.get_grid_position(g, 0, grid_height + 2);
 
         let mut prefix = String::from("> ");
-
-        let input_string: String = self
-            .input
-            .iter()
-            .map(|&digit| char::from_u32(digit).unwrap_or('?'))
-            .collect();
-
-        prefix.push_str(&input_string);
+        prefix.push_str(&self.input);
 
         g.draw_text(Color::RGBA(255, 255, 255, 0.3), x, y, &prefix);
     }

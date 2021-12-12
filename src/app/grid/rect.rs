@@ -8,6 +8,9 @@ pub struct Rect {
 
 impl Rect {
     pub fn new(width: i32, height: i32, position: GridPosition) -> Self {
-        Rect { position, size: (width, height) }
+        Rect {
+            position,
+            size: (width, height),
+        }
     }
 }

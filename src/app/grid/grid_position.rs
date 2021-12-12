@@ -1,5 +1,5 @@
-use std::cmp;
 use super::Rect;
+use std::cmp;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GridPosition {

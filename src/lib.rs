@@ -1,7 +1,7 @@
 mod app;
 mod web;
 
-use app::{InputState, State};
+use app::{InputState, Input, State};
 use web::{WebAudio, WebGraphics};
 
 use std::cell::RefCell;
@@ -80,10 +80,25 @@ fn state_loop() {
     state.process_messages(&messages);
 }
 
-fn handle_input(event: KeyboardEvent) {
-    let input_state = unsafe { INPUT_STATE.as_mut().unwrap() };
+fn get_input(event: KeyboardEvent) -> Input {
+    match event.key().as_str() {
+        "Shift" => Input::Shift,
+        "Control" => Input::Control,
+        "Alt" => Input::Alt,
+        "Backspace" => Input::Backspace,
+        "Escape" => Input::Escape,
+        c => Input::C(c.chars().next().unwrap_or('?')),
+    }
+}
 
-    input_state.handle_input(event.key_code());
+fn handle_keydown(event: KeyboardEvent) {
+    let input_state = unsafe { INPUT_STATE.as_mut().unwrap() };
+    input_state.handle_keydown(get_input(event));
+}
+
+fn handle_keyup(event: KeyboardEvent) {
+    let input_state = unsafe { INPUT_STATE.as_mut().unwrap() };
+    input_state.handle_keyup(get_input(event));
 }
 
 fn graphics_loop() {
@@ -115,17 +130,24 @@ fn setup_callbacks(window: &Window) -> Result<(), JsValue> {
 
     window.set_interval_with_callback_and_timeout_and_arguments_0(
         state_cb.as_ref().unchecked_ref(),
-        10,
+        100,
     )?;
 
-    let input_cb = Closure::wrap(Box::new(move |event: KeyboardEvent| {
+    let keyup_cb = Closure::wrap(Box::new(move |event: KeyboardEvent| {
         event.prevent_default();
-        handle_input(event);
+        handle_keyup(event);
     }) as Box<dyn FnMut(_)>);
 
-    window.add_event_listener_with_callback("keydown", input_cb.as_ref().unchecked_ref())?;
+    let keydown_cb = Closure::wrap(Box::new(move |event: KeyboardEvent| {
+        event.prevent_default();
+        handle_keydown(event);
+    }) as Box<dyn FnMut(_)>);
 
-    input_cb.forget();
+    window.add_event_listener_with_callback("keydown", keydown_cb.as_ref().unchecked_ref())?;
+    window.add_event_listener_with_callback("keyup", keyup_cb.as_ref().unchecked_ref())?;
+
+    keyup_cb.forget();
+    keydown_cb.forget();
     audio_cb.forget();
     state_cb.forget();
 

@@ -6,14 +6,43 @@
   </head>
   <body>
     <style>
-      canvas {
-        border: 1px solid black;
-        width: 1280px;
-        height: 720px;
-      }
+        html {
+              box-sizing: border-box;
+              height: 100%;
+        }
+        *, *:before, *:after {
+              box-sizing: inherit;
+        }
+
+        body {
+            background: #000;
+            color: #fff;
+            height: 100%;
+            margin: 0;
+        }
+
+        main {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+
+        canvas {
+            border: 1px solid black;
+            width: 1280px;
+            height: 720px;
+        }
+
+        button {
+            width: 120px;
+        }
     </style>
-    <canvas id="ui"></canvas>
-    <button id="start">start</button>
+    <main>
+        <canvas id="ui"></canvas>
+        <button id="start">start</button>
+    </main>
     <script src="index.js"></script>
   </body>
 </html>

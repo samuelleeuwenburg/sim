@@ -1,5 +1,5 @@
-use crate::app::user_interface::DisplayEntity;
 use super::GridPosition;
+use crate::app::user_interface::DisplayEntity;
 
 pub trait GridEntity {
     fn set_position(&mut self, position: &GridPosition);

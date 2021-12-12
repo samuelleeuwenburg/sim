@@ -27,11 +27,13 @@ impl GridEntity for Track {
     }
 
     fn get_display(&self) -> DisplayEntity {
-        DisplayEntity { position: self.grid_position, text: String::from("t") }
+        DisplayEntity {
+            position: self.grid_position,
+            text: String::from("t"),
+        }
     }
 
     fn get_prompt(&self) -> String {
         "track".into()
     }
 }
-
