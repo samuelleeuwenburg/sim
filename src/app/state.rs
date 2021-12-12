@@ -6,11 +6,31 @@ use super::message::Message;
 use super::user_interface::{Graphics, UserInterface};
 use super::GridEntity;
 
+pub enum Entity {
+    VCO(VCO),
+    Track(Track),
+}
+
+impl Entity {
+    pub fn get_mut_source(&mut self) -> &mut dyn Source {
+        match self {
+            Entity::VCO(o) => &mut o.oscillator as &mut dyn Source,
+            Entity::Track(t) => &mut t.track as &mut dyn Source,
+        }
+    }
+
+    pub fn get_grid_entity(&self) -> &dyn GridEntity {
+        match self {
+            Entity::VCO(o) => o as &dyn GridEntity,
+            Entity::Track(t) => t as &dyn GridEntity,
+        }
+    }
+}
+
 pub struct State<const BUFFER_SIZE: usize> {
     primary: Primary<BUFFER_SIZE>,
     freq_pos: usize,
-    tracks: Vec<Track>,
-    pub oscillators: Vec<VCO>,
+    entities: Vec<Entity>,
     pub user_interface: UserInterface,
 }
 
@@ -20,42 +40,29 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
 
         State {
             primary: Primary::with_tracker(tracker, sample_rate),
-            oscillators: vec![],
-            tracks: vec![],
+            entities: Vec::with_capacity(256),
             freq_pos: 1,
             user_interface: UserInterface::new(),
         }
     }
 
     pub fn sample(&mut self) -> &[f32; BUFFER_SIZE] {
-        let mut a: Vec<&mut dyn Source> = self
-            .oscillators
+        let sources: Vec<&mut dyn Source> = self
+            .entities
             .iter_mut()
-            .map(|vco| &mut vco.oscillator as &mut dyn Source)
+            .map(|e| e.get_mut_source())
             .collect();
 
-        let mut b: Vec<&mut dyn Source> = self
-            .tracks
-            .iter_mut()
-            .map(|t| &mut t.track as &mut dyn Source)
-            .collect();
-
-        a.append(&mut b);
-
-        self.primary.sample(a).unwrap()
+        self.primary.sample(sources).unwrap()
     }
 
     pub fn update_ui(&mut self) {
         self.user_interface.display_entities.clear();
 
-        for osc in &self.oscillators {
-            self.user_interface.display_entities.push(osc.get_display());
-        }
-
-        for track in &self.tracks {
+        for e in &self.entities {
             self.user_interface
                 .display_entities
-                .push(track.get_display());
+                .push(e.get_grid_entity().get_display());
         }
     }
 
@@ -95,17 +102,11 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
             Message::UpdatePrompt => {
                 self.user_interface.prompt = "".into();
 
-                for osc in &self.oscillators {
-                    if osc.get_position() == &self.user_interface.cursor {
-                        self.user_interface.prompt = osc.get_prompt();
-                        break;
-                    }
-                }
+                for e in &self.entities {
+                    let e = e.get_grid_entity();
 
-                for track in &self.tracks {
-                    if track.get_position() == &self.user_interface.cursor {
-                        self.user_interface.prompt = track.get_prompt();
-                        break;
+                    if e.get_position() == &self.user_interface.cursor {
+                        self.user_interface.prompt = e.get_prompt();
                     }
                 }
             }
@@ -121,7 +122,7 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
                 vco.oscillator.frequency = f;
 
                 self.primary.add_monitor(vco.oscillator.output);
-                self.oscillators.push(vco);
+                self.entities.push(Entity::VCO(vco));
 
                 self.freq_pos = if self.freq_pos >= 8 {
                     1
@@ -138,32 +139,20 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
 
                 track.set_position(&pos);
 
-                self.tracks.push(track);
+                self.entities.push(Entity::Track(track));
 
                 self.process_message(&Message::UpdatePrompt);
             }
 
             Message::DeleteEntity => {
-                let position = self.user_interface.cursor;
-
                 let mut index = 0;
 
-                for vco in self.oscillators.iter() {
-                    let pos = vco.get_position();
-                    if pos.x == position.x && pos.y == position.y {
-                        self.oscillators.swap_remove(index);
-                        break;
-                    }
+                for e in self.entities.iter() {
+                    let e = e.get_grid_entity();
+                    let pos = e.get_position();
 
-                    index += 1;
-                }
-
-                index = 0;
-
-                for track in self.tracks.iter() {
-                    let pos = track.get_position();
-                    if pos.x == position.x && pos.y == position.y {
-                        self.tracks.swap_remove(index);
+                    if pos == &self.user_interface.cursor {
+                        self.entities.swap_remove(index);
                         break;
                     }
 
