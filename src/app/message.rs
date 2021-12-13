@@ -37,6 +37,10 @@ impl Message {
             (false, false, &[Input::C('g'), Input::C('g')]) => Some(Message::MoveTo(GridPosition::new(0, 0))), // move to origin
             (false, true, &[Input::C('G')]) => Some(Message::MoveTo(GridPosition::new(1000, 1000))), // move to the end optimistically
 
+            (false, false,  &[Input::C('0')]) => Some(Message::Move(GridPosition::new(-1000, 0))), // move to the start of line
+            (false, true,  &[Input::C('$')]) => Some(Message::Move(GridPosition::new(1000, 0))), // move to the end of line
+            (true, false,  &[Input::C('u')]) => Some(Message::Move(GridPosition::new(0, -8))), // move a "block" up
+            (true, false,  &[Input::C('d')]) => Some(Message::Move(GridPosition::new(0, 8))),   // move a "block" down
             (false, true,  &[Input::C('{')]) => Some(Message::Move(GridPosition::new(0, -4))), // move a "block" up
             (false, true,  &[Input::C('}')]) => Some(Message::Move(GridPosition::new(0, 4))),   // move a "block" down
             (false, false,  &[Input::C('b')]) => Some(Message::Move(GridPosition::new(-4, 0))), // move a "block" backwards
