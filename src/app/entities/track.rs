@@ -1,5 +1,5 @@
 use crate::app::grid::{GridEntity, GridPosition};
-use crate::app::user_interface::DisplayEntity;
+use crate::app::user_interface::{Color, DisplayEntity};
 use screech::basic::Track as T;
 use screech::traits::Tracker;
 
@@ -30,6 +30,7 @@ impl GridEntity for Track {
         DisplayEntity {
             position: self.grid_position,
             text: String::from("t"),
+            color: Color::RGB(0, 255, 255),
         }
     }
 

@@ -1,5 +1,5 @@
 use crate::app::grid::{GridEntity, GridPosition};
-use crate::app::user_interface::DisplayEntity;
+use crate::app::user_interface::{Color, DisplayEntity};
 use screech::basic::Oscillator;
 use screech::traits::Tracker;
 
@@ -30,6 +30,7 @@ impl GridEntity for VCO {
         DisplayEntity {
             position: self.grid_position,
             text: String::from("o"),
+            color: Color::RGB(255, 255, 255),
         }
     }
 

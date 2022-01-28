@@ -1,7 +1,7 @@
 mod app;
 mod web;
 
-use app::{InputState, Input, State};
+use app::{Input, InputState, State};
 use web::{WebAudio, WebGraphics};
 
 use std::cell::RefCell;
@@ -87,6 +87,8 @@ fn get_input(event: KeyboardEvent) -> Input {
         "Alt" => Input::Alt,
         "Backspace" => Input::Backspace,
         "Escape" => Input::Escape,
+        "Tab" => Input::Tab,
+        "Enter" => Input::Enter,
         c => Input::C(c.chars().next().unwrap_or('?')),
     }
 }

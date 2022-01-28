@@ -1,10 +1,13 @@
-use super::grid::{GridPosition, Rect};
+use super::grid::{Grid, GridPosition};
 
+#[derive(Clone, Copy)]
 pub enum Color {
     RGB(u8, u8, u8),
     RGBA(u8, u8, u8, f32),
 }
 
+#[allow(dead_code)]
+#[derive(Clone, Copy)]
 pub enum Style {
     Fill,
     Stroke,
@@ -20,11 +23,11 @@ pub trait Graphics {
 pub struct DisplayEntity {
     pub position: GridPosition,
     pub text: String,
+    pub color: Color,
 }
 
 pub struct UserInterface {
     pub cursor: GridPosition,
-    pub grid: Rect,
     pub grid_block_size: (f32, f32),
     pub prompt: String,
     pub display_entities: Vec<DisplayEntity>,
@@ -35,7 +38,6 @@ impl UserInterface {
     pub fn new() -> Self {
         UserInterface {
             cursor: GridPosition::new(0, 0),
-            grid: Rect::new(33, 17, GridPosition::new(0, 0)),
             grid_block_size: (42.0, 64.0),
             prompt: String::from(""),
             input: String::from(""),
@@ -43,10 +45,10 @@ impl UserInterface {
         }
     }
 
-    fn get_grid_position(&self, g: &dyn Graphics, x: i32, y: i32) -> (f32, f32) {
+    fn get_grid_position(&self, g: &dyn Graphics, grid: &Grid, x: i32, y: i32) -> (f32, f32) {
         let (width, height) = g.get_viewport();
 
-        let (grid_width, grid_height) = self.grid.size;
+        let (grid_width, grid_height) = grid.rect.size;
         let (block_width, block_height) = self.grid_block_size;
 
         let origin_x = width as f32 / 2.0 - (grid_width as f32 * block_width) / 2.0;
@@ -58,14 +60,14 @@ impl UserInterface {
         (px_x, px_y)
     }
 
-    pub fn render(&self, g: &dyn Graphics) {
+    pub fn render(&self, g: &dyn Graphics, grid: &Grid) {
         g.clear();
         self.render_background(g);
-        self.render_grid(g);
-        self.render_entities(g);
-        self.render_cursor(g);
-        self.render_prompt(g);
-        self.render_input(g);
+        self.render_grid(g, grid);
+        self.render_entities(g, grid);
+        self.render_cursor(g, grid);
+        self.render_prompt(g, grid);
+        self.render_input(g, grid);
     }
 
     fn render_background(&self, g: &dyn Graphics) {
@@ -81,12 +83,12 @@ impl UserInterface {
         );
     }
 
-    fn render_grid(&self, g: &dyn Graphics) {
-        let (grid_width, grid_height) = self.grid.size;
+    fn render_grid(&self, g: &dyn Graphics, grid: &Grid) {
+        let (grid_width, grid_height) = grid.rect.size;
 
         for x in 0..grid_width {
             for y in 0..grid_height {
-                let (px_x, px_y) = self.get_grid_position(g, x as i32, y as i32);
+                let (px_x, px_y) = self.get_grid_position(g, grid, x as i32, y as i32);
                 let spacing = 4;
 
                 if x % spacing == 0 && y % spacing == 0 {
@@ -98,32 +100,32 @@ impl UserInterface {
         }
     }
 
-    fn render_entity(&self, g: &dyn Graphics, entity: &DisplayEntity) {
-        let (x, y) = self.get_grid_position(g, entity.position.x, entity.position.y);
-        g.draw_text(Color::RGB(255, 255, 255), x, y, &entity.text);
+    fn render_entity(&self, g: &dyn Graphics, grid: &Grid, entity: &DisplayEntity) {
+        let (x, y) = self.get_grid_position(g, grid, entity.position.x, entity.position.y);
+        g.draw_text(entity.color, x, y, &entity.text);
     }
 
-    fn render_entities(&self, g: &dyn Graphics) {
+    fn render_entities(&self, g: &dyn Graphics, grid: &Grid) {
         for entity in &self.display_entities {
-            self.render_entity(g, entity);
+            self.render_entity(g, grid, entity);
         }
     }
 
-    fn render_cursor(&self, g: &dyn Graphics) {
-        let (x, y) = self.get_grid_position(g, self.cursor.x, self.cursor.y);
+    fn render_cursor(&self, g: &dyn Graphics, grid: &Grid) {
+        let (x, y) = self.get_grid_position(g, grid, self.cursor.x, self.cursor.y);
         g.draw_text(Color::RGB(255, 255, 0), x, y, ".");
     }
 
-    fn render_prompt(&self, g: &dyn Graphics) {
-        let (_, grid_height) = self.grid.size;
-        let (x, y) = self.get_grid_position(g, 0, grid_height + 1);
+    fn render_prompt(&self, g: &dyn Graphics, grid: &Grid) {
+        let (_, grid_height) = grid.rect.size;
+        let (x, y) = self.get_grid_position(g, grid, 0, grid_height + 1);
 
         g.draw_text(Color::RGBA(255, 255, 255, 0.5), x, y, &self.prompt);
     }
 
-    fn render_input(&self, g: &dyn Graphics) {
-        let (_, grid_height) = self.grid.size;
-        let (x, y) = self.get_grid_position(g, 0, grid_height + 2);
+    fn render_input(&self, g: &dyn Graphics, grid: &Grid) {
+        let (_, grid_height) = grid.rect.size;
+        let (x, y) = self.get_grid_position(g, grid, 0, grid_height + 2);
 
         let mut prefix = String::from("> ");
         prefix.push_str(&self.input);
