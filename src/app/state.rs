@@ -3,14 +3,13 @@ use screech::traits::Source;
 
 use super::entities::{Modifier, Track, VCO};
 use super::grid::{Entity, Grid};
-use super::message::Message;
+use super::message::{EntityMsg, Message};
 use super::user_interface::{Graphics, UserInterface};
 
 pub struct State<const BUFFER_SIZE: usize> {
     primary: Primary<BUFFER_SIZE>,
     grid: Grid,
     pub user_interface: UserInterface,
-    freq_pos: usize,
 }
 
 impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
@@ -21,7 +20,6 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
             primary: Primary::with_tracker(tracker, sample_rate),
             grid: Grid::new(),
             user_interface: UserInterface::new(),
-            freq_pos: 1,
         }
     }
 
@@ -75,55 +73,28 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
             }
 
             Message::UpdatePrompt => {
-                self.user_interface.prompt = "".into();
-
-                for e in &self.grid.entities {
-                    if e.get_position() == &self.user_interface.cursor {
-                        self.user_interface.prompt = e.get_prompt();
-                    }
-                }
+                self.user_interface.prompt = self
+                    .grid
+                    .get_entity(&self.user_interface.cursor)
+                    .map(|e| e.get_prompt())
+                    .unwrap_or_else(|| "".into());
             }
 
-            Message::AddModifier(mod_type) => {
-                let pos = self.user_interface.cursor;
-                let mut modifier = Modifier::new(mod_type);
-                modifier.set_position(&pos);
-                self.grid.entities.push(Box::new(modifier));
+            Message::AddEntity(msg) => {
+                if self.grid.get_entity(&self.user_interface.cursor).is_none() {
+                    let mut entity: Box<dyn Entity> = match msg {
+                        EntityMsg::VCO => Box::new(VCO::new(&mut self.primary)),
+                        EntityMsg::Track => Box::new(Track::new(&mut self.primary)),
+                        EntityMsg::Modifier(mod_type) => Box::new(Modifier::new(mod_type)),
+                    };
 
-                self.process_message(&Message::UpdatePrompt);
-            }
+                    entity.set_position(&self.user_interface.cursor);
+                    self.grid.entities.push(entity);
 
-            Message::AddOscillator => {
-                let pos = self.user_interface.cursor;
-                let mut vco = VCO::new(&mut self.primary);
-                let f = 110.0 * self.freq_pos as f32;
-
-                vco.set_position(&pos);
-                vco.oscillator.output_saw();
-                vco.oscillator.amplitude = 0.1;
-                vco.oscillator.frequency = f;
-
-                self.primary.add_monitor(vco.oscillator.output);
-                self.grid.entities.push(Box::new(vco));
-
-                self.freq_pos = if self.freq_pos >= 8 {
-                    1
+                    self.process_message(&Message::UpdatePrompt);
                 } else {
-                    self.freq_pos + 1
-                };
-
-                self.process_message(&Message::UpdatePrompt);
-            }
-
-            Message::AddTrack => {
-                let pos = self.user_interface.cursor;
-                let mut track = Track::new(&mut self.primary);
-
-                track.set_position(&pos);
-
-                self.grid.entities.push(Box::new(track));
-
-                self.process_message(&Message::UpdatePrompt);
+                    self.user_interface.prompt = "Space is occupied".into()
+                }
             }
 
             Message::DeleteEntity => {
@@ -139,6 +110,8 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
 
                     index += 1;
                 }
+
+                self.user_interface.prompt.clear();
             }
         }
     }

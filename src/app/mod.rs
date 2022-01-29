@@ -5,7 +5,6 @@ mod message;
 mod state;
 pub mod user_interface;
 
-pub use grid::Entity;
 pub use input_state::{Input, InputState};
 pub use state::State;
 pub use user_interface::UserInterface;

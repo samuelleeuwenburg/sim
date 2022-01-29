@@ -10,9 +10,12 @@ pub struct VCO {
 
 impl VCO {
     pub fn new(tracker: &mut dyn Tracker) -> Self {
+        let mut oscillator = Oscillator::new(tracker);
+        oscillator.frequency = 440.0;
+
         VCO {
             grid_position: Position::origin(),
-            oscillator: Oscillator::new(tracker),
+            oscillator,
         }
     }
 }

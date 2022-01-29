@@ -12,4 +12,12 @@ impl Grid {
             entities: Vec::with_capacity(256),
         }
     }
+
+    pub fn get_entity(&self, pos: &Position) -> Option<&Box<dyn Entity>> {
+        self.entities.iter().find(|e| e.get_position() == pos)
+    }
+
+    pub fn is_occupied(&self, pos: &Position) -> bool {
+        self.rect.intersect_position(&pos)
+    }
 }

@@ -1,14 +1,19 @@
 use super::entities::ModType;
-use super::grid::Position;
+use super::grid::{Entity, Position};
 use super::input_state::{Input, InputState};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
+pub enum EntityMsg {
+    Track,
+    VCO,
+    Modifier(ModType),
+}
+
+#[derive(Clone)]
 pub enum Message {
     Move(Position),
     MoveTo(Position),
-    AddOscillator,
-    AddTrack,
-    AddModifier(ModType),
+    AddEntity(EntityMsg),
     DeleteEntity,
     ClearInput,
     UpdatePrompt,
@@ -71,15 +76,25 @@ impl Message {
             } // down
 
             // modules
-            (false, true, &[Input::C('O')]) => Some(Message::AddOscillator),
-            (false, true, &[Input::C('T')]) => Some(Message::AddTrack),
+            (false, true, &[Input::C('O')]) => Some(Message::AddEntity(EntityMsg::VCO)),
+            (false, true, &[Input::C('T')]) => Some(Message::AddEntity(EntityMsg::Track)),
 
             // modifiers
-            (false, false, &[Input::C('s')]) => Some(Message::AddModifier(ModType::S)),
-            (false, false, &[Input::C('i')]) => Some(Message::AddModifier(ModType::I)),
-            (false, false, &[Input::C('f')]) => Some(Message::AddModifier(ModType::F)),
-            (false, false, &[Input::C('p')]) => Some(Message::AddModifier(ModType::P)),
-            (false, false, &[Input::C('v')]) => Some(Message::AddModifier(ModType::V)),
+            (false, false, &[Input::C('s')]) => {
+                Some(Message::AddEntity(EntityMsg::Modifier(ModType::S)))
+            }
+            (false, false, &[Input::C('i')]) => {
+                Some(Message::AddEntity(EntityMsg::Modifier(ModType::I)))
+            }
+            (false, false, &[Input::C('f')]) => {
+                Some(Message::AddEntity(EntityMsg::Modifier(ModType::F)))
+            }
+            (false, false, &[Input::C('p')]) => {
+                Some(Message::AddEntity(EntityMsg::Modifier(ModType::P)))
+            }
+            (false, false, &[Input::C('v')]) => {
+                Some(Message::AddEntity(EntityMsg::Modifier(ModType::V)))
+            }
 
             (false, false, &[Input::C('d'), Input::C('d')]) => Some(Message::DeleteEntity),
 

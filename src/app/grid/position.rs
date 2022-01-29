@@ -31,15 +31,14 @@ impl Position {
     pub fn is_adjacent(&self, pos: &Self) -> bool {
         let rect = Rect::new(3, 3, Position::new(pos.x - 1, pos.y - 1));
 
-        rect.intersects_position(pos) && pos != self
+        rect.intersect_position(pos) && pos != self
     }
 
     pub fn clamp(&mut self, rect: &Rect) -> &mut Self {
-        let (w, h) = rect.size;
         let x_min = rect.position.x;
-        let x_max = rect.position.x + w - 1;
+        let x_max = rect.position.x + rect.width - 1;
         let y_min = rect.position.y;
-        let y_max = rect.position.y + h - 1;
+        let y_max = rect.position.y + rect.height - 1;
 
         self.x = cmp::min(cmp::max(self.x, x_min), x_max);
         self.y = cmp::min(cmp::max(self.y, y_min), y_max);

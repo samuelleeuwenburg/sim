@@ -48,11 +48,10 @@ impl UserInterface {
     fn get_grid_position(&self, g: &dyn Graphics, grid: &Grid, x: i32, y: i32) -> (f32, f32) {
         let (width, height) = g.get_viewport();
 
-        let (grid_width, grid_height) = grid.rect.size;
         let (block_width, block_height) = self.grid_block_size;
 
-        let origin_x = width as f32 / 2.0 - (grid_width as f32 * block_width) / 2.0;
-        let origin_y = height as f32 / 2.0 - (grid_height as f32 * block_height) / 2.0;
+        let origin_x = width as f32 / 2.0 - (grid.rect.width as f32 * block_width) / 2.0;
+        let origin_y = height as f32 / 2.0 - (grid.rect.height as f32 * block_height) / 2.0;
 
         let px_x = origin_x + (x as f32 * block_width);
         let px_y = origin_y + (y as f32 * block_height);
@@ -84,10 +83,8 @@ impl UserInterface {
     }
 
     fn render_grid(&self, g: &dyn Graphics, grid: &Grid) {
-        let (grid_width, grid_height) = grid.rect.size;
-
-        for x in 0..grid_width {
-            for y in 0..grid_height {
+        for x in 0..grid.rect.width {
+            for y in 0..grid.rect.height {
                 let (px_x, px_y) = self.get_grid_position(g, grid, x as i32, y as i32);
                 let spacing = 4;
 
@@ -117,15 +114,13 @@ impl UserInterface {
     }
 
     fn render_prompt(&self, g: &dyn Graphics, grid: &Grid) {
-        let (_, grid_height) = grid.rect.size;
-        let (x, y) = self.get_grid_position(g, grid, 0, grid_height + 1);
+        let (x, y) = self.get_grid_position(g, grid, 0, grid.rect.height + 1);
 
         g.draw_text(Color::RGBA(255, 255, 255, 0.5), x, y, &self.prompt);
     }
 
     fn render_input(&self, g: &dyn Graphics, grid: &Grid) {
-        let (_, grid_height) = grid.rect.size;
-        let (x, y) = self.get_grid_position(g, grid, 0, grid_height + 2);
+        let (x, y) = self.get_grid_position(g, grid, 0, grid.rect.height + 2);
 
         let mut prefix = String::from("> ");
         prefix.push_str(&self.input);
