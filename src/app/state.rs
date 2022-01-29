@@ -1,11 +1,10 @@
 use screech::core::{BasicTracker, Primary};
 use screech::traits::Source;
 
-use super::entities::{Entity, Modifier, Track, VCO};
-use super::grid::Grid;
+use super::entities::{Modifier, Track, VCO};
+use super::grid::{Entity, Grid};
 use super::message::Message;
 use super::user_interface::{Graphics, UserInterface};
-use super::GridEntity;
 
 pub struct State<const BUFFER_SIZE: usize> {
     primary: Primary<BUFFER_SIZE>,
@@ -41,9 +40,7 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
         self.user_interface.display_entities.clear();
 
         for e in &self.grid.entities {
-            self.user_interface
-                .display_entities
-                .push(e.get_grid_entity().get_display());
+            self.user_interface.display_entities.push(e.get_display());
         }
     }
 
@@ -81,8 +78,6 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
                 self.user_interface.prompt = "".into();
 
                 for e in &self.grid.entities {
-                    let e = e.get_grid_entity();
-
                     if e.get_position() == &self.user_interface.cursor {
                         self.user_interface.prompt = e.get_prompt();
                     }
@@ -93,7 +88,7 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
                 let pos = self.user_interface.cursor;
                 let mut modifier = Modifier::new(mod_type);
                 modifier.set_position(&pos);
-                self.grid.entities.push(Entity::Modifier(modifier));
+                self.grid.entities.push(Box::new(modifier));
 
                 self.process_message(&Message::UpdatePrompt);
             }
@@ -109,7 +104,7 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
                 vco.oscillator.frequency = f;
 
                 self.primary.add_monitor(vco.oscillator.output);
-                self.grid.entities.push(Entity::VCO(vco));
+                self.grid.entities.push(Box::new(vco));
 
                 self.freq_pos = if self.freq_pos >= 8 {
                     1
@@ -126,7 +121,7 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
 
                 track.set_position(&pos);
 
-                self.grid.entities.push(Entity::Track(track));
+                self.grid.entities.push(Box::new(track));
 
                 self.process_message(&Message::UpdatePrompt);
             }
@@ -135,7 +130,6 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
                 let mut index = 0;
 
                 for e in self.grid.entities.iter() {
-                    let e = e.get_grid_entity();
                     let pos = e.get_position();
 
                     if pos == &self.user_interface.cursor {

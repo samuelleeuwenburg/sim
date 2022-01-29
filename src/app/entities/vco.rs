@@ -1,28 +1,28 @@
-use crate::app::grid::{GridEntity, GridPosition};
+use crate::app::grid::{Entity, Position};
 use crate::app::user_interface::{Color, DisplayEntity};
 use screech::basic::Oscillator;
-use screech::traits::Tracker;
+use screech::traits::{Source, Tracker};
 
 pub struct VCO {
-    grid_position: GridPosition,
+    grid_position: Position,
     pub oscillator: Oscillator,
 }
 
 impl VCO {
     pub fn new(tracker: &mut dyn Tracker) -> Self {
         VCO {
-            grid_position: GridPosition::new(0, 0),
+            grid_position: Position::origin(),
             oscillator: Oscillator::new(tracker),
         }
     }
 }
 
-impl GridEntity for VCO {
-    fn set_position(&mut self, position: &GridPosition) {
+impl Entity for VCO {
+    fn set_position(&mut self, position: &Position) {
         self.grid_position.move_to(position);
     }
 
-    fn get_position(&self) -> &GridPosition {
+    fn get_position(&self) -> &Position {
         &self.grid_position
     }
 
@@ -36,5 +36,9 @@ impl GridEntity for VCO {
 
     fn get_prompt(&self) -> String {
         format!("vco @ {} freq", self.oscillator.frequency)
+    }
+
+    fn get_mut_source(&mut self) -> Option<&mut dyn Source> {
+        Some(&mut self.oscillator as &mut dyn Source)
     }
 }

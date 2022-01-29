@@ -1,11 +1,11 @@
 use super::entities::ModType;
-use super::grid::GridPosition;
+use super::grid::Position;
 use super::input_state::{Input, InputState};
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    Move(GridPosition),
-    MoveTo(GridPosition),
+    Move(Position),
+    MoveTo(Position),
     AddOscillator,
     AddTrack,
     AddModifier(ModType),
@@ -37,37 +37,37 @@ impl Message {
 
             // movement
             (false, false, &[Input::C('g'), Input::C('g')]) => {
-                Some(Message::MoveTo(GridPosition::new(0, 0)))
+                Some(Message::MoveTo(Position::new(0, 0)))
             } // move to origin
-            (false, true, &[Input::C('G')]) => Some(Message::MoveTo(GridPosition::new(1000, 1000))), // move to the end optimistically
+            (false, true, &[Input::C('G')]) => Some(Message::MoveTo(Position::new(1000, 1000))), // move to the end optimistically
 
-            (false, false, &[Input::C('0')]) => Some(Message::Move(GridPosition::new(-1000, 0))), // move to the start of line
-            (false, true, &[Input::C('$')]) => Some(Message::Move(GridPosition::new(1000, 0))), // move to the end of line
-            (true, false, &[Input::C('u')]) => Some(Message::Move(GridPosition::new(0, -8))), // move a "block" up
-            (true, false, &[Input::C('d')]) => Some(Message::Move(GridPosition::new(0, 8))), // move a "block" down
-            (false, true, &[Input::C('{')]) => Some(Message::Move(GridPosition::new(0, -4))), // move a "block" up
-            (false, true, &[Input::C('}')]) => Some(Message::Move(GridPosition::new(0, 4))), // move a "block" down
-            (false, false, &[Input::C('b')]) => Some(Message::Move(GridPosition::new(-4, 0))), // move a "block" backwards
+            (false, false, &[Input::C('0')]) => Some(Message::Move(Position::new(-1000, 0))), // move to the start of line
+            (false, true, &[Input::C('$')]) => Some(Message::Move(Position::new(1000, 0))), // move to the end of line
+            (true, false, &[Input::C('u')]) => Some(Message::Move(Position::new(0, -8))), // move a "block" up
+            (true, false, &[Input::C('d')]) => Some(Message::Move(Position::new(0, 8))), // move a "block" down
+            (false, true, &[Input::C('{')]) => Some(Message::Move(Position::new(0, -4))), // move a "block" up
+            (false, true, &[Input::C('}')]) => Some(Message::Move(Position::new(0, 4))), // move a "block" down
+            (false, false, &[Input::C('b')]) => Some(Message::Move(Position::new(-4, 0))), // move a "block" backwards
             (false, false, &[Input::C('e')] | &[Input::C('w')]) => {
-                Some(Message::Move(GridPosition::new(4, 0)))
+                Some(Message::Move(Position::new(4, 0)))
             } // move a "block" forward
 
-            (false, false, &[Input::C('h')]) => Some(Message::Move(GridPosition::new(-1, 0))), // left
-            (false, false, &[Input::C('l')]) => Some(Message::Move(GridPosition::new(1, 0))), // right
-            (false, false, &[Input::C('k')]) => Some(Message::Move(GridPosition::new(0, -1))), // up
-            (false, false, &[Input::C('j')]) => Some(Message::Move(GridPosition::new(0, 1))), // down
+            (false, false, &[Input::C('h')]) => Some(Message::Move(Position::new(-1, 0))), // left
+            (false, false, &[Input::C('l')]) => Some(Message::Move(Position::new(1, 0))),  // right
+            (false, false, &[Input::C('k')]) => Some(Message::Move(Position::new(0, -1))), // up
+            (false, false, &[Input::C('j')]) => Some(Message::Move(Position::new(0, 1))),  // down
 
             (false, false, &[.., Input::C('h')]) => {
-                Some(Message::Move(GridPosition::new(-get_mult(&input), 0)))
+                Some(Message::Move(Position::new(-get_mult(&input), 0)))
             } // left
             (false, false, &[.., Input::C('l')]) => {
-                Some(Message::Move(GridPosition::new(get_mult(&input), 0)))
+                Some(Message::Move(Position::new(get_mult(&input), 0)))
             } // right
             (false, false, &[.., Input::C('k')]) => {
-                Some(Message::Move(GridPosition::new(0, -get_mult(&input))))
+                Some(Message::Move(Position::new(0, -get_mult(&input))))
             } // up
             (false, false, &[.., Input::C('j')]) => {
-                Some(Message::Move(GridPosition::new(0, get_mult(&input))))
+                Some(Message::Move(Position::new(0, get_mult(&input))))
             } // down
 
             // modules

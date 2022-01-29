@@ -1,4 +1,4 @@
-use super::grid::{Grid, GridPosition};
+use super::grid::{Grid, Position};
 
 #[derive(Clone, Copy)]
 pub enum Color {
@@ -21,13 +21,13 @@ pub trait Graphics {
 }
 
 pub struct DisplayEntity {
-    pub position: GridPosition,
+    pub position: Position,
     pub text: String,
     pub color: Color,
 }
 
 pub struct UserInterface {
-    pub cursor: GridPosition,
+    pub cursor: Position,
     pub grid_block_size: (f32, f32),
     pub prompt: String,
     pub display_entities: Vec<DisplayEntity>,
@@ -37,7 +37,7 @@ pub struct UserInterface {
 impl UserInterface {
     pub fn new() -> Self {
         UserInterface {
-            cursor: GridPosition::new(0, 0),
+            cursor: Position::new(0, 0),
             grid_block_size: (42.0, 64.0),
             prompt: String::from(""),
             input: String::from(""),

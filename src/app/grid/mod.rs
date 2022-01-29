@@ -1,9 +1,9 @@
+mod entity;
 mod grid;
-mod grid_entity;
-mod grid_position;
+mod position;
 mod rect;
 
+pub use entity::Entity;
 pub use grid::Grid;
-pub use grid_entity::GridEntity;
-pub use grid_position::GridPosition;
+pub use position::Position;
 pub use rect::Rect;

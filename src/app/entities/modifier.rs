@@ -1,5 +1,6 @@
-use crate::app::grid::{GridEntity, GridPosition};
+use crate::app::grid::{Entity, Position};
 use crate::app::user_interface::{Color, DisplayEntity};
+use screech::traits::Source;
 
 #[derive(Debug, Clone, Copy)]
 pub enum ModType {
@@ -11,7 +12,7 @@ pub enum ModType {
 }
 
 impl ModType {
-    pub fn get_display(&self, &position: &GridPosition) -> DisplayEntity {
+    pub fn get_display(&self, &position: &Position) -> DisplayEntity {
         let text = match self {
             ModType::S => String::from("s"),
             ModType::I => String::from("i"),
@@ -41,25 +42,25 @@ impl ModType {
 }
 
 pub struct Modifier {
-    grid_position: GridPosition,
+    grid_position: Position,
     pub mod_type: ModType,
 }
 
 impl Modifier {
     pub fn new(mod_type: &ModType) -> Self {
         Modifier {
-            grid_position: GridPosition::new(0, 0),
+            grid_position: Position::origin(),
             mod_type: *mod_type,
         }
     }
 }
 
-impl GridEntity for Modifier {
-    fn set_position(&mut self, position: &GridPosition) {
+impl Entity for Modifier {
+    fn set_position(&mut self, position: &Position) {
         self.grid_position.move_to(position);
     }
 
-    fn get_position(&self) -> &GridPosition {
+    fn get_position(&self) -> &Position {
         &self.grid_position
     }
 
@@ -69,5 +70,9 @@ impl GridEntity for Modifier {
 
     fn get_prompt(&self) -> String {
         self.mod_type.get_prompt()
+    }
+
+    fn get_mut_source(&mut self) -> Option<&mut dyn Source> {
+        None
     }
 }
