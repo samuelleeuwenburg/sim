@@ -1,22 +1,23 @@
-use super::entities::ModType;
-use super::grid::{Entity, Position};
+use super::grid::ConnType;
+use super::grid::Position;
 use super::input_state::{Input, InputState};
 
 #[derive(Clone)]
-pub enum EntityMsg {
+pub enum Modules {
     Track,
     VCO,
-    Modifier(ModType),
 }
 
 #[derive(Clone)]
 pub enum Message {
     Move(Position),
     MoveTo(Position),
-    AddEntity(EntityMsg),
+    AddConnector(ConnType),
+    AddModule(Modules),
     DeleteEntity,
     ClearInput,
     UpdatePrompt,
+    UpdateEntities,
     SetInput(String),
 }
 
@@ -76,25 +77,14 @@ impl Message {
             } // down
 
             // modules
-            (false, true, &[Input::C('O')]) => Some(Message::AddEntity(EntityMsg::VCO)),
-            (false, true, &[Input::C('T')]) => Some(Message::AddEntity(EntityMsg::Track)),
+            (false, true, &[Input::C('O')]) => Some(Message::AddModule(Modules::VCO)),
+            (false, true, &[Input::C('M')]) => Some(Message::AddModule(Modules::Track)),
 
-            // modifiers
-            (false, false, &[Input::C('s')]) => {
-                Some(Message::AddEntity(EntityMsg::Modifier(ModType::S)))
-            }
-            (false, false, &[Input::C('i')]) => {
-                Some(Message::AddEntity(EntityMsg::Modifier(ModType::I)))
-            }
-            (false, false, &[Input::C('f')]) => {
-                Some(Message::AddEntity(EntityMsg::Modifier(ModType::F)))
-            }
-            (false, false, &[Input::C('p')]) => {
-                Some(Message::AddEntity(EntityMsg::Modifier(ModType::P)))
-            }
-            (false, false, &[Input::C('v')]) => {
-                Some(Message::AddEntity(EntityMsg::Modifier(ModType::V)))
-            }
+            // connectors
+            (false, false, &[Input::C('s')]) => Some(Message::AddConnector(ConnType::S)),
+            (false, false, &[Input::C('i')]) => Some(Message::AddConnector(ConnType::I)),
+            (false, false, &[Input::C('f')]) => Some(Message::AddConnector(ConnType::F)),
+            (false, false, &[Input::C('p')]) => Some(Message::AddConnector(ConnType::P)),
 
             (false, false, &[Input::C('d'), Input::C('d')]) => Some(Message::DeleteEntity),
 

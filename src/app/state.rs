@@ -1,10 +1,8 @@
-use screech::core::{BasicTracker, Primary};
-use screech::traits::Source;
-
-use super::entities::{Modifier, Track, VCO};
-use super::grid::{Entity, Grid};
-use super::message::{EntityMsg, Message};
+use super::grid::{Connector, Entity, Grid, Module};
+use super::message::{Message, Modules};
+use super::modules::{Track, VCO};
 use super::user_interface::{Graphics, UserInterface};
+use screech::core::{BasicTracker, Primary};
 
 pub struct State<const BUFFER_SIZE: usize> {
     primary: Primary<BUFFER_SIZE>,
@@ -24,20 +22,14 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
     }
 
     pub fn sample(&mut self) -> &[f32; BUFFER_SIZE] {
-        let sources: Vec<&mut dyn Source> = self
-            .grid
-            .entities
-            .iter_mut()
-            .filter_map(|e| e.get_mut_source())
-            .collect();
-
+        let sources = self.grid.get_mut_sources();
         self.primary.sample(sources).unwrap()
     }
 
     pub fn update_ui(&mut self) {
         self.user_interface.display_entities.clear();
 
-        for e in &self.grid.entities {
+        for e in self.grid.get_entities() {
             self.user_interface.display_entities.push(e.get_display());
         }
     }
@@ -80,37 +72,39 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
                     .unwrap_or_else(|| "".into());
             }
 
-            Message::AddEntity(msg) => {
+            Message::UpdateEntities => {
+                self.grid.update_connections();
+            }
+
+            Message::AddConnector(conn_type) => {
                 if self.grid.get_entity(&self.user_interface.cursor).is_none() {
-                    let mut entity: Box<dyn Entity> = match msg {
-                        EntityMsg::VCO => Box::new(VCO::new(&mut self.primary)),
-                        EntityMsg::Track => Box::new(Track::new(&mut self.primary)),
-                        EntityMsg::Modifier(mod_type) => Box::new(Modifier::new(mod_type)),
+                    let mut conn = Connector::new(conn_type);
+                    conn.set_position(&self.user_interface.cursor);
+                    self.grid.add_connector(conn);
+                } else {
+                    self.user_interface.prompt = "already occupied".into()
+                }
+            }
+
+            Message::AddModule(msg) => {
+                if self.grid.get_entity(&self.user_interface.cursor).is_none() {
+                    let mut module: Box<dyn Module> = match msg {
+                        Modules::VCO => Box::new(VCO::new(&mut self.primary)),
+                        Modules::Track => Box::new(Track::new(&mut self.primary)),
                     };
 
-                    entity.set_position(&self.user_interface.cursor);
-                    self.grid.entities.push(entity);
+                    module.set_position(&self.user_interface.cursor);
+                    self.grid.add_module(module);
 
                     self.process_message(&Message::UpdatePrompt);
+                    self.process_message(&Message::UpdateEntities);
                 } else {
-                    self.user_interface.prompt = "Space is occupied".into()
+                    self.user_interface.prompt = "already occupied".into()
                 }
             }
 
             Message::DeleteEntity => {
-                let mut index = 0;
-
-                for e in self.grid.entities.iter() {
-                    let pos = e.get_position();
-
-                    if pos == &self.user_interface.cursor {
-                        self.grid.entities.swap_remove(index);
-                        break;
-                    }
-
-                    index += 1;
-                }
-
+                self.grid.remove_entity(&self.user_interface.cursor);
                 self.user_interface.prompt.clear();
             }
         }

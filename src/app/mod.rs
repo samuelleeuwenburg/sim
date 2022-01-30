@@ -1,7 +1,7 @@
-mod entities;
 mod grid;
 mod input_state;
 mod message;
+mod modules;
 mod state;
 pub mod user_interface;
 
