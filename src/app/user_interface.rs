@@ -1,9 +1,10 @@
 use super::grid::{Grid, Position};
+use super::input_state::InputMode;
 
 #[derive(Clone, Copy)]
 pub enum Color {
-    RGB(u8, u8, u8),
-    RGBA(u8, u8, u8, f32),
+    Rgb(u8, u8, u8),
+    Rgba(u8, u8, u8, f32),
 }
 
 #[allow(dead_code)]
@@ -30,6 +31,7 @@ pub struct UserInterface {
     pub cursor: Position,
     pub grid_block_size: (f32, f32),
     pub prompt: String,
+    pub mode: &'static str,
     pub display_entities: Vec<DisplayEntity>,
     pub input: String,
 }
@@ -40,6 +42,7 @@ impl UserInterface {
             cursor: Position::new(0, 0),
             grid_block_size: (42.0, 64.0),
             prompt: String::from(""),
+            mode: InputMode::Command.get_prompt(),
             input: String::from(""),
             display_entities: vec![],
         }
@@ -66,6 +69,7 @@ impl UserInterface {
         self.render_entities(g, grid);
         self.render_cursor(g, grid);
         self.render_prompt(g, grid);
+        self.render_mode(g, grid);
         self.render_input(g, grid);
     }
 
@@ -73,7 +77,7 @@ impl UserInterface {
         let (width, height) = g.get_viewport();
 
         g.draw_rect(
-            Color::RGB(0, 0, 0),
+            Color::Rgb(0, 0, 0),
             Style::Fill,
             0.0,
             0.0,
@@ -89,9 +93,9 @@ impl UserInterface {
                 let spacing = 4;
 
                 if x % spacing == 0 && y % spacing == 0 {
-                    g.draw_text(Color::RGBA(255, 255, 255, 0.2), px_x, px_y, ".");
+                    g.draw_text(Color::Rgba(255, 255, 255, 0.2), px_x, px_y, ".");
                 } else {
-                    g.draw_text(Color::RGBA(255, 255, 255, 0.1), px_x, px_y, ".");
+                    g.draw_text(Color::Rgba(255, 255, 255, 0.1), px_x, px_y, ".");
                 }
             }
         }
@@ -110,13 +114,19 @@ impl UserInterface {
 
     fn render_cursor(&self, g: &dyn Graphics, grid: &Grid) {
         let (x, y) = self.get_grid_position(g, grid, self.cursor.x, self.cursor.y);
-        g.draw_text(Color::RGB(255, 255, 0), x, y, ".");
+        g.draw_text(Color::Rgb(255, 255, 0), x, y, ".");
     }
 
     fn render_prompt(&self, g: &dyn Graphics, grid: &Grid) {
         let (x, y) = self.get_grid_position(g, grid, 0, grid.rect.height + 1);
 
-        g.draw_text(Color::RGBA(255, 255, 255, 0.5), x, y, &self.prompt);
+        g.draw_text(Color::Rgba(255, 255, 255, 0.5), x, y, &self.prompt);
+    }
+
+    fn render_mode(&self, g: &dyn Graphics, grid: &Grid) {
+        let (x, y) = self.get_grid_position(g, grid, grid.rect.width - 3, grid.rect.height + 2);
+
+        g.draw_text(Color::Rgba(0, 255, 255, 1.0), x, y, &self.mode);
     }
 
     fn render_input(&self, g: &dyn Graphics, grid: &Grid) {
@@ -125,6 +135,6 @@ impl UserInterface {
         let mut prefix = String::from("> ");
         prefix.push_str(&self.input);
 
-        g.draw_text(Color::RGBA(255, 255, 255, 0.3), x, y, &prefix);
+        g.draw_text(Color::Rgba(255, 255, 255, 0.3), x, y, &prefix);
     }
 }

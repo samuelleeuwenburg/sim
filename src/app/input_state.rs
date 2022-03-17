@@ -27,9 +27,25 @@ impl Input {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum InputMode {
+    Command,
+    Insert,
+}
+
+impl InputMode {
+    pub fn get_prompt(&self) -> &'static str {
+        match self {
+            InputMode::Command => "",
+            InputMode::Insert => "INS",
+        }
+    }
+}
+
 pub struct InputState {
     input_buffer: Vec<Input>,
     message_buffer: Vec<Message>,
+    pub mode: InputMode,
     pub shift: bool,
     pub control: bool,
 }
@@ -37,6 +53,7 @@ pub struct InputState {
 impl InputState {
     pub fn new() -> Self {
         InputState {
+            mode: InputMode::Command,
             input_buffer: Vec::with_capacity(10),
             message_buffer: Vec::with_capacity(10),
             shift: false,
@@ -49,9 +66,13 @@ impl InputState {
     }
 
     pub fn try_message(&mut self) -> &mut Self {
-        if let Some(message) = Message::from_input(&self, &self.input_buffer) {
+        for message in Message::from_input(self, &self.input_buffer) {
             match message {
                 Message::SetInput(_) => (),
+                Message::SwitchInputMode(mode) => {
+                    self.mode = mode;
+                    self.input_buffer.clear()
+                }
                 _ => self.input_buffer.clear(),
             }
 
@@ -75,8 +96,9 @@ impl InputState {
         match input {
             Input::Shift => self.shift = true,
             Input::Control => self.control = true,
-            Input::Escape => self.input_buffer.push(input),
-            Input::C(_) => self.input_buffer.push(input),
+            Input::C(_) | Input::Escape | Input::Enter | Input::Backspace | Input::Tab => {
+                self.input_buffer.push(input)
+            }
             _ => (),
         }
 

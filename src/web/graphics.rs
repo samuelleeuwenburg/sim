@@ -24,8 +24,8 @@ impl WebGraphics {
 
     fn set_fill_style(&self, color: &Color) {
         let value = match color {
-            Color::RGB(r, g, b) => format!("rgb({}, {}, {})", r, g, b),
-            Color::RGBA(r, g, b, a) => format!("rgba({}, {}, {}, {})", r, g, b, a),
+            Color::Rgb(r, g, b) => format!("rgb({}, {}, {})", r, g, b),
+            Color::Rgba(r, g, b, a) => format!("rgba({}, {}, {}, {})", r, g, b, a),
         };
 
         self.ctx.set_fill_style(&JsValue::from_str(&value));

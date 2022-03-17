@@ -55,7 +55,7 @@ impl WebAudio {
         let mut left = vec![0.0; self.buffer_size / 2];
         let mut right = vec![0.0; self.buffer_size / 2];
 
-        for (i, sample) in samples.into_iter().enumerate() {
+        for (i, sample) in samples.iter().enumerate() {
             if i % 2 != 0 {
                 left[i / 2] = *sample;
             } else {
@@ -67,8 +67,8 @@ impl WebAudio {
             .ctx
             .create_buffer(channels, self.buffer_size as u32 / 2, sample_rate)?;
 
-        buffer.copy_to_channel(&mut left, 0)?;
-        buffer.copy_to_channel(&mut right, 1)?;
+        buffer.copy_to_channel(&left, 0)?;
+        buffer.copy_to_channel(&right, 1)?;
 
         Ok(buffer)
     }

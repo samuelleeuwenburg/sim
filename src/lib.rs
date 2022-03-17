@@ -9,7 +9,8 @@ use std::rc::Rc;
 
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{HtmlCanvasElement, KeyboardEvent, Window};
+use web_sys::console;
+use web_sys::{DragEvent, HtmlCanvasElement, KeyboardEvent, Window};
 
 const BUFFER_SIZE: usize = 4800;
 
@@ -111,7 +112,17 @@ fn graphics_loop() {
     state.render_ui(graphics);
 }
 
+fn handle_drop(event: DragEvent) {
+    event.prevent_default();
+    let data_transfer = event.data_transfer().unwrap();
+    console::log_1(&data_transfer.into());
+}
+
 fn setup_callbacks(window: &Window) -> Result<(), JsValue> {
+    let drag_cb = Closure::wrap(
+        Box::new(move |event: web_sys::DragEvent| event.prevent_default()) as Box<dyn FnMut(_)>,
+    );
+    let drop_cb = Closure::wrap(Box::new(handle_drop) as Box<dyn FnMut(_)>);
     let audio_cb = Closure::wrap(Box::new(audio_loop) as Box<dyn FnMut()>);
     let state_cb = Closure::wrap(Box::new(state_loop) as Box<dyn FnMut()>);
     let ui_f: Rc<RefCell<Option<Closure<dyn FnMut()>>>> = Rc::new(RefCell::new(None));
@@ -135,6 +146,9 @@ fn setup_callbacks(window: &Window) -> Result<(), JsValue> {
         100,
     )?;
 
+    window.set_ondrop(Some(drop_cb.as_ref().unchecked_ref()));
+    window.set_ondragover(Some(drag_cb.as_ref().unchecked_ref()));
+
     let keyup_cb = Closure::wrap(Box::new(move |event: KeyboardEvent| {
         event.prevent_default();
         handle_keyup(event);
@@ -148,6 +162,8 @@ fn setup_callbacks(window: &Window) -> Result<(), JsValue> {
     window.add_event_listener_with_callback("keydown", keydown_cb.as_ref().unchecked_ref())?;
     window.add_event_listener_with_callback("keyup", keyup_cb.as_ref().unchecked_ref())?;
 
+    drag_cb.forget();
+    drop_cb.forget();
     keyup_cb.forget();
     keydown_cb.forget();
     audio_cb.forget();

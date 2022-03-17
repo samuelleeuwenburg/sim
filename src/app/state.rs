@@ -1,6 +1,5 @@
-use super::grid::{Connector, Entity, Grid, Module};
-use super::message::{Message, Modules};
-use super::modules::{Track, VCO};
+use super::grid::{Entity, Grid, Step};
+use super::message::Message;
 use super::user_interface::{Graphics, UserInterface};
 use screech::core::{BasicTracker, Primary};
 
@@ -52,16 +51,21 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
             Message::MoveTo(pos) => {
                 self.user_interface
                     .cursor
-                    .move_to(&pos)
+                    .move_to(pos)
                     .clamp(&self.grid.rect);
 
                 self.process_message(&Message::UpdatePrompt);
             }
 
             Message::Move(pos) => {
-                self.user_interface.cursor.add(&pos).clamp(&self.grid.rect);
+                self.user_interface.cursor.add(pos).clamp(&self.grid.rect);
 
                 self.process_message(&Message::UpdatePrompt);
+            }
+
+            Message::MoveToEmpty => {
+                let pos = self.grid.find_nearest_empty(&self.user_interface.cursor);
+                self.process_message(&Message::MoveTo(pos));
             }
 
             Message::UpdatePrompt => {
@@ -72,32 +76,11 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
                     .unwrap_or_else(|| "".into());
             }
 
-            Message::UpdateEntities => {
-                self.grid.update_connections();
-            }
-
-            Message::AddConnector(conn_type) => {
-                if self.grid.get_entity(&self.user_interface.cursor).is_none() {
-                    let mut conn = Connector::new(conn_type);
-                    conn.set_position(&self.user_interface.cursor);
-                    self.grid.add_connector(conn);
-                } else {
-                    self.user_interface.prompt = "already occupied".into()
-                }
-            }
-
-            Message::AddModule(msg) => {
-                if self.grid.get_entity(&self.user_interface.cursor).is_none() {
-                    let mut module: Box<dyn Module> = match msg {
-                        Modules::VCO => Box::new(VCO::new(&mut self.primary)),
-                        Modules::Track => Box::new(Track::new(&mut self.primary)),
-                    };
-
-                    module.set_position(&self.user_interface.cursor);
-                    self.grid.add_module(module);
-
-                    self.process_message(&Message::UpdatePrompt);
-                    self.process_message(&Message::UpdateEntities);
+            Message::AddStep => {
+                if self.grid.is_empty(&self.user_interface.cursor) {
+                    let mut step = Step::new(&mut self.primary);
+                    step.set_position(&self.user_interface.cursor);
+                    self.grid.add_step(step);
                 } else {
                     self.user_interface.prompt = "already occupied".into()
                 }
@@ -106,6 +89,10 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
             Message::DeleteEntity => {
                 self.grid.remove_entity(&self.user_interface.cursor);
                 self.user_interface.prompt.clear();
+            }
+
+            Message::SwitchInputMode(mode) => {
+                self.user_interface.mode = mode.get_prompt();
             }
         }
     }

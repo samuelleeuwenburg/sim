@@ -1,23 +1,16 @@
-use super::grid::ConnType;
 use super::grid::Position;
-use super::input_state::{Input, InputState};
-
-#[derive(Clone)]
-pub enum Modules {
-    Track,
-    VCO,
-}
+use super::input_state::{Input, InputMode, InputState};
 
 #[derive(Clone)]
 pub enum Message {
+    SwitchInputMode(InputMode),
     Move(Position),
     MoveTo(Position),
-    AddConnector(ConnType),
-    AddModule(Modules),
+    MoveToEmpty,
+    AddStep,
     DeleteEntity,
     ClearInput,
     UpdatePrompt,
-    UpdateEntities,
     SetInput(String),
 }
 
@@ -34,65 +27,92 @@ fn get_mult(input: &[Input]) -> i32 {
 }
 
 impl Message {
-    pub fn from_input(state: &InputState, input: &[Input]) -> Option<Self> {
+    pub fn from_input(state: &InputState, input: &[Input]) -> Vec<Self> {
+        let commands = match state.mode {
+            InputMode::Command => Self::mode_command(state, input),
+            InputMode::Insert => Self::mode_insert(state, input),
+        };
+
+        match commands.as_slice() {
+            [] => {
+                let string = input.iter().map(|i| i.to_char()).collect::<String>();
+                vec![Message::SetInput(string)]
+            }
+            _ => commands,
+        }
+    }
+
+    fn mode_command(state: &InputState, input: &[Input]) -> Vec<Self> {
         match (state.control, state.shift, input) {
             // input
             (true, false, &[.., Input::C('[')]) | (false, false, &[.., Input::Escape]) => {
-                Some(Message::ClearInput)
+                vec![Message::ClearInput]
+            }
+
+            // change mode
+            (false, false, &[.., Input::C('i')]) => {
+                vec![Message::SwitchInputMode(InputMode::Insert)]
             }
 
             // movement
             (false, false, &[Input::C('g'), Input::C('g')]) => {
-                Some(Message::MoveTo(Position::new(0, 0)))
+                vec![Message::MoveTo(Position::new(0, 0))]
             } // move to origin
-            (false, true, &[Input::C('G')]) => Some(Message::MoveTo(Position::new(1000, 1000))), // move to the end optimistically
+            (false, true, &[Input::C('G')]) => vec![Message::MoveTo(Position::new(1000, 1000))], // move to the end optimistically
 
-            (false, false, &[Input::C('0')]) => Some(Message::Move(Position::new(-1000, 0))), // move to the start of line
-            (false, true, &[Input::C('$')]) => Some(Message::Move(Position::new(1000, 0))), // move to the end of line
-            (true, false, &[Input::C('u')]) => Some(Message::Move(Position::new(0, -8))), // move a "block" up
-            (true, false, &[Input::C('d')]) => Some(Message::Move(Position::new(0, 8))), // move a "block" down
-            (false, true, &[Input::C('{')]) => Some(Message::Move(Position::new(0, -4))), // move a "block" up
-            (false, true, &[Input::C('}')]) => Some(Message::Move(Position::new(0, 4))), // move a "block" down
-            (false, false, &[Input::C('b')]) => Some(Message::Move(Position::new(-4, 0))), // move a "block" backwards
+            (false, false, &[Input::C('0')]) => vec![Message::Move(Position::new(-1000, 0))], // move to the start of line
+            (false, true, &[Input::C('$')]) => vec![Message::Move(Position::new(1000, 0))], // move to the end of line
+            (true, false, &[Input::C('u')]) => vec![Message::Move(Position::new(0, -8))], // move a "block" up
+            (true, false, &[Input::C('d')]) => vec![Message::Move(Position::new(0, 8))], // move a "block" down
+            (false, true, &[Input::C('{')]) => vec![Message::Move(Position::new(0, -4))], // move a "block" up
+            (false, true, &[Input::C('}')]) => vec![Message::Move(Position::new(0, 4))], // move a "block" down
+            (false, false, &[Input::C('b')]) => vec![Message::Move(Position::new(-4, 0))], // move a "block" backwards
             (false, false, &[Input::C('e')] | &[Input::C('w')]) => {
-                Some(Message::Move(Position::new(4, 0)))
+                vec![Message::Move(Position::new(4, 0))]
             } // move a "block" forward
 
-            (false, false, &[Input::C('h')]) => Some(Message::Move(Position::new(-1, 0))), // left
-            (false, false, &[Input::C('l')]) => Some(Message::Move(Position::new(1, 0))),  // right
-            (false, false, &[Input::C('k')]) => Some(Message::Move(Position::new(0, -1))), // up
-            (false, false, &[Input::C('j')]) => Some(Message::Move(Position::new(0, 1))),  // down
+            (false, false, &[Input::C('h')]) => vec![Message::Move(Position::new(-1, 0))], // left
+            (false, false, &[Input::C('l')]) => vec![Message::Move(Position::new(1, 0))],  // right
+            (false, false, &[Input::C('k')]) => vec![Message::Move(Position::new(0, -1))], // up
+            (false, false, &[Input::C('j')]) => vec![Message::Move(Position::new(0, 1))],  // down
 
             (false, false, &[.., Input::C('h')]) => {
-                Some(Message::Move(Position::new(-get_mult(&input), 0)))
+                vec![Message::Move(Position::new(-get_mult(input), 0))]
             } // left
             (false, false, &[.., Input::C('l')]) => {
-                Some(Message::Move(Position::new(get_mult(&input), 0)))
+                vec![Message::Move(Position::new(get_mult(input), 0))]
             } // right
             (false, false, &[.., Input::C('k')]) => {
-                Some(Message::Move(Position::new(0, -get_mult(&input))))
+                vec![Message::Move(Position::new(0, -get_mult(input)))]
             } // up
             (false, false, &[.., Input::C('j')]) => {
-                Some(Message::Move(Position::new(0, get_mult(&input))))
+                vec![Message::Move(Position::new(0, get_mult(input)))]
             } // down
 
-            // modules
-            (false, true, &[Input::C('O')]) => Some(Message::AddModule(Modules::VCO)),
-            (false, true, &[Input::C('M')]) => Some(Message::AddModule(Modules::Track)),
+            // deletion
+            (false, false, &[Input::C('d'), Input::C('d')]) => vec![Message::DeleteEntity],
 
-            // connectors
-            (false, false, &[Input::C('s')]) => Some(Message::AddConnector(ConnType::S)),
-            (false, false, &[Input::C('i')]) => Some(Message::AddConnector(ConnType::I)),
-            (false, false, &[Input::C('f')]) => Some(Message::AddConnector(ConnType::F)),
-            (false, false, &[Input::C('p')]) => Some(Message::AddConnector(ConnType::P)),
+            _ => vec![],
+        }
+    }
 
-            (false, false, &[Input::C('d'), Input::C('d')]) => Some(Message::DeleteEntity),
-
-            // update input prompt
-            _ => {
-                let string = input.iter().map(|i| i.to_char()).collect::<String>();
-                Some(Message::SetInput(string))
+    fn mode_insert(state: &InputState, input: &[Input]) -> Vec<Self> {
+        match (state.control, state.shift, input) {
+            // exit mode
+            (true, false, &[.., Input::C('[')]) | (false, false, &[.., Input::Escape]) => {
+                vec![Message::SwitchInputMode(InputMode::Command)]
             }
+
+            // movement
+            (false, false, &[Input::C(' ')]) => vec![Message::Move(Position::new(1, 0))],
+            (false, false, &[Input::Enter]) => vec![Message::Move(Position::new(-10000, 1))],
+            (false, true, &[Input::Enter]) => vec![Message::Move(Position::new(0, 1))],
+
+            // step
+            (false, false, &[Input::C('.')]) => {
+                vec![Message::AddStep, Message::MoveToEmpty]
+            }
+            _ => vec![],
         }
     }
 }
