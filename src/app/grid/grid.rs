@@ -3,6 +3,11 @@ use screech::core::ExternalSignal;
 use screech::traits::Source;
 use std::collections::HashMap;
 
+// @TODO: move to screech package
+fn signal_print(signal: ExternalSignal) -> String {
+    format!("{}:{}", signal.get_source_id(), signal.get_signal_id())
+}
+
 enum GridEntity {
     Step(Step),
 }
@@ -121,6 +126,25 @@ impl Grid {
             signal = Some(step.output);
         }
     }
+
+    pub fn get_connections(&self) -> Vec<String> {
+        let mut connections = self
+            .entities
+            .values()
+            .map(|e| match e {
+                GridEntity::Step(step) => {
+                    format!(
+                        "Step output: {}, input: {}",
+                        signal_print(step.output),
+                        step.input.map(|s| signal_print(s)).unwrap_or("None".into()),
+                    )
+                }
+            })
+            .collect::<Vec<String>>();
+
+        connections.sort();
+        connections
+    }
 }
 
 #[cfg(test)]
@@ -131,7 +155,6 @@ mod tests {
     #[test]
     fn test_chain_steps() {
         let mut primary = Primary::<4>::new(4);
-        primary.output_mono();
 
         let mut steps = [
             Step::new(&mut primary),
@@ -141,21 +164,9 @@ mod tests {
         ];
 
         steps[0].set_position(&Position::new(0, 0));
-        steps[0].is_active = true;
-        steps[0].frequency = 1.5;
-
         steps[1].set_position(&Position::new(1, 0));
-        steps[1].frequency = 1.5;
-
         steps[2].set_position(&Position::new(2, 0));
-        steps[2].frequency = 1.5;
-
         steps[3].set_position(&Position::new(3, 0));
-        steps[3].frequency = 1.5;
-
-        primary.add_monitor(steps[0].output);
-        primary.add_monitor(steps[2].output);
-        primary.add_monitor(steps[3].output);
 
         let mut grid = Grid::new();
 
@@ -164,16 +175,13 @@ mod tests {
         }
 
         assert_eq!(
-            primary.sample(grid.get_mut_sources()).unwrap(),
-            &[0.0, 0.0, 1.0, 0.0]
-        );
-        assert_eq!(
-            primary.sample(grid.get_mut_sources()).unwrap(),
-            &[0.0, 0.0, 1.0, 0.0]
-        );
-        assert_eq!(
-            primary.sample(grid.get_mut_sources()).unwrap(),
-            &[1.0, 0.0, 0.0, 0.0]
-        );
+            grid.get_connections(),
+            vec![
+                "Step output: 0:0, input: None",
+                "Step output: 1:0, input: 0:0",
+                "Step output: 2:0, input: 1:0",
+                "Step output: 3:0, input: 2:0",
+            ]
+        )
     }
 }
