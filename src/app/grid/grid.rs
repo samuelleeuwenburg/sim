@@ -142,10 +142,16 @@ mod tests {
 
         steps[0].set_position(&Position::new(0, 0));
         steps[0].is_active = true;
+        steps[0].frequency = 1.5;
 
         steps[1].set_position(&Position::new(1, 0));
+        steps[1].frequency = 1.5;
+
         steps[2].set_position(&Position::new(2, 0));
+        steps[2].frequency = 1.5;
+
         steps[3].set_position(&Position::new(3, 0));
+        steps[3].frequency = 1.5;
 
         primary.add_monitor(steps[0].output);
         primary.add_monitor(steps[2].output);

@@ -5,10 +5,10 @@ use screech::traits::{Source, Tracker};
 
 #[derive(Debug)]
 pub struct Step {
-    pub output: ExternalSignal,
     grid_position: Position,
-    frequency: f32,
     counter: f32,
+    pub output: ExternalSignal,
+    pub frequency: f32,
     pub is_active: bool,
     pub input: Option<ExternalSignal>,
 }
@@ -18,9 +18,9 @@ impl Step {
         Step {
             output: ExternalSignal::new(tracker.create_source_id(), 0),
             grid_position: Position::origin(),
-            frequency: 1.5,
+            frequency: 1.0,
             counter: 0.0,
-            is_active: true,
+            is_active: false,
             input: None,
         }
     }
@@ -114,6 +114,9 @@ mod tests {
 
         let mut step_1 = Step::new(&mut primary);
         let mut step_2 = Step::new(&mut primary);
+
+        step_1.frequency = 1.5;
+        step_2.frequency = 1.5;
 
         step_1.is_active = true;
         step_2.input = Some(step_1.output);

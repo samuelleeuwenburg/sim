@@ -79,6 +79,7 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
             Message::AddStep => {
                 if self.grid.is_empty(&self.user_interface.cursor) {
                     let mut step = Step::new(&mut self.primary);
+                    step.is_active = true;
                     step.set_position(&self.user_interface.cursor);
                     self.grid.add_step(step);
                 } else {
