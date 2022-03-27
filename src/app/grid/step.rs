@@ -1,16 +1,25 @@
-use crate::app::grid::{Entity, EntityKind, Position};
+use crate::app::grid::{Entity, EntityKind, EntityMutKind, Position};
 use crate::app::user_interface::{Color, DisplayEntity};
 use screech::core::{ExternalSignal, Signal};
 use screech::traits::{Source, Tracker};
+use std::cmp;
+
+#[derive(Debug)]
+enum State {
+    Charging,
+    Discharging,
+    Idle,
+}
 
 #[derive(Debug)]
 pub struct Step {
     grid_position: Position,
-    counter: f32,
+    state: State,
+    charge: usize,
+    pub max_charge: usize,
+    pub level: Signal,
     pub output: ExternalSignal,
-    pub frequency: f32,
-    pub is_active: bool,
-    pub input: Option<ExternalSignal>,
+    inputs: Vec<ExternalSignal>,
 }
 
 impl Step {
@@ -18,36 +27,69 @@ impl Step {
         Step {
             output: ExternalSignal::new(tracker.create_source_id(), 0),
             grid_position: Position::origin(),
-            frequency: 1.0,
-            counter: 0.0,
-            is_active: false,
-            input: None,
+            inputs: vec![],
+            state: State::Idle,
+            level: Signal::point(1.0),
+            max_charge: 0,
+            charge: 0,
         }
+    }
+
+    pub fn trigger(&mut self, charge: usize) -> &mut Self {
+        self.charge = charge;
+        self
+    }
+
+    pub fn clear_connections(&mut self) -> &mut Self {
+        self.inputs.clear();
+        self
+    }
+
+    pub fn add_input(&mut self, &signal: &ExternalSignal) -> &mut Self {
+        self.inputs.push(signal);
+        self
+    }
+
+    pub fn get_inputs(&self) -> &[ExternalSignal] {
+        &self.inputs
     }
 }
 
 impl Source for Step {
-    fn sample(&mut self, sources: &mut dyn Tracker, sample_rate: usize) {
-        let increase_per_sample = 1.0 / sample_rate as f32 * self.frequency;
-
-        // listen for gate at the input
-        if let Some(i) = self.input.and_then(|i| sources.get_signal(&i)) {
-            if i.get_point() >= &0.5 {
-                self.is_active = true;
+    fn sample(&mut self, sources: &mut dyn Tracker, _sample_rate: usize) {
+        // set output state
+        self.state = match self
+            .inputs
+            .clone()
+            .into_iter()
+            .filter_map(|i| sources.get_signal(&i))
+            .find(|s| s.get_point() >= &0.5)
+        {
+            Some(_) => State::Charging,
+            _ => {
+                if self.charge == 0 {
+                    State::Idle
+                } else {
+                    State::Discharging
+                }
             }
+        };
+
+        // set output
+        match self.state {
+            State::Discharging => sources.set_signal(&self.output, self.level),
+            _ => sources.set_signal(&self.output, Signal::silence()),
         }
 
-        if self.is_active {
-            self.counter += increase_per_sample;
+        // update state
+        match self.state {
+            State::Charging => self.charge += 1,
+            State::Discharging => self.charge -= 1,
+            _ => (),
         }
 
-        if self.counter >= 1.0 {
-            self.counter = 0.0;
-            self.is_active = false;
-            sources.set_signal(&self.output, Signal::point(1.0));
-        } else {
-            sources.set_signal(&self.output, Signal::point(0.0));
-        }
+        // set max charge
+        self.max_charge = cmp::max(self.charge, self.max_charge);
     }
 
     fn get_source_id(&self) -> &usize {
@@ -55,10 +97,11 @@ impl Source for Step {
     }
 
     fn get_sources(&self) -> Vec<usize> {
-        match self.input {
-            Some(i) => vec![*i.get_source_id()],
-            None => vec![],
-        }
+        self.inputs
+            .clone()
+            .into_iter()
+            .map(|i| *i.get_source_id())
+            .collect()
     }
 }
 
@@ -72,10 +115,11 @@ impl Entity for Step {
     }
 
     fn get_display(&self) -> DisplayEntity {
-        let color = if self.is_active {
-            Color::Rgba(0, 255, 255, 1.0)
-        } else {
-            Color::Rgba(255, 255, 255, 0.5)
+        let alpha = (self.charge as f32 / self.max_charge as f32) / 2.0 + 0.5;
+
+        let color = match self.state {
+            State::Discharging => Color::Rgba(255, 255, 255, alpha),
+            _ => Color::Rgba(255, 255, 255, 0.2),
         };
 
         DisplayEntity {
@@ -93,8 +137,8 @@ impl Entity for Step {
         EntityKind::Step(self)
     }
 
-    fn as_mut_kind(&mut self) -> EntityKind {
-        EntityKind::Step(self)
+    fn as_mut_kind(&mut self) -> EntityMutKind {
+        EntityMutKind::Step(self)
     }
 
     fn as_mut_source(&mut self) -> &mut dyn Source {
@@ -115,25 +159,22 @@ mod tests {
         let mut step_1 = Step::new(&mut primary);
         let mut step_2 = Step::new(&mut primary);
 
-        step_1.frequency = 1.5;
-        step_2.frequency = 1.5;
-
-        step_1.is_active = true;
-        step_2.input = Some(step_1.output);
+        step_1.level = Signal::point(0.8);
+        step_1.trigger(3);
+        step_2.level = Signal::point(0.6);
+        step_2.add_input(&step_1.output);
 
         primary.add_monitor(step_1.output);
-
-        assert_eq!(
-            primary.sample(vec![&mut step_1, &mut step_2]).unwrap(),
-            &[0.0, 0.0, 1.0, 0.0]
-        );
-
-        primary.remove_monitor(&step_1.output);
         primary.add_monitor(step_2.output);
 
         assert_eq!(
             primary.sample(vec![&mut step_1, &mut step_2]).unwrap(),
-            &[1.0, 0.0, 0.0, 0.0]
+            &[0.8, 0.8, 0.8, 0.6]
+        );
+
+        assert_eq!(
+            primary.sample(vec![&mut step_1, &mut step_2]).unwrap(),
+            &[0.6, 0.6, 0.0, 0.0]
         );
     }
 }

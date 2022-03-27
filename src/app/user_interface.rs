@@ -93,9 +93,9 @@ impl UserInterface {
                 let spacing = 4;
 
                 if x % spacing == 0 && y % spacing == 0 {
-                    g.draw_text(Color::Rgba(255, 255, 255, 0.2), px_x, px_y, ".");
-                } else {
                     g.draw_text(Color::Rgba(255, 255, 255, 0.1), px_x, px_y, ".");
+                } else {
+                    g.draw_text(Color::Rgba(255, 255, 255, 0.05), px_x, px_y, ".");
                 }
             }
         }

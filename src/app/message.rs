@@ -8,6 +8,7 @@ pub enum Message {
     MoveTo(Position),
     MoveToEmpty,
     AddStep,
+    AddTrigger,
     DeleteEntity,
     ClearInput,
     UpdatePrompt,
@@ -108,9 +109,12 @@ impl Message {
             (false, false, &[Input::Enter]) => vec![Message::Move(Position::new(-10000, 1))],
             (false, true, &[Input::Enter]) => vec![Message::Move(Position::new(0, 1))],
 
-            // step
+            // entities
             (false, false, &[Input::C('.')]) => {
                 vec![Message::AddStep, Message::MoveToEmpty]
+            }
+            (false, false, &[Input::C('t')]) => {
+                vec![Message::AddTrigger, Message::MoveToEmpty]
             }
             _ => vec![],
         }

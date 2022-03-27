@@ -1,4 +1,4 @@
-use super::grid::{Entity, Grid, Step};
+use super::grid::{Entity, Grid, Step, Trigger};
 use super::message::Message;
 use super::user_interface::{Graphics, UserInterface};
 use screech::core::{BasicTracker, Primary};
@@ -79,9 +79,18 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
             Message::AddStep => {
                 if self.grid.is_empty(&self.user_interface.cursor) {
                     let mut step = Step::new(&mut self.primary);
-                    step.is_active = true;
                     step.set_position(&self.user_interface.cursor);
                     self.grid.add_step(step);
+                } else {
+                    self.user_interface.prompt = "already occupied".into()
+                }
+            }
+
+            Message::AddTrigger => {
+                if self.grid.is_empty(&self.user_interface.cursor) {
+                    let mut trigger = Trigger::new(&mut self.primary);
+                    trigger.set_position(&self.user_interface.cursor);
+                    self.grid.add_trigger(trigger);
                 } else {
                     self.user_interface.prompt = "already occupied".into()
                 }
