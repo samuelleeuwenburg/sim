@@ -113,6 +113,7 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasm-bindgen-test",
+ "wavv",
  "web-sys",
 ]
 
@@ -252,6 +253,12 @@ dependencies = [
  "proc-macro2 0.4.30",
  "quote 0.6.13",
 ]
+
+[[package]]
+name = "wavv"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "97a6b4519ec130fa7da3596552b110f65d480fcdaca4eb6dc5533b6a4da4f899"
 
 [[package]]
 name = "web-sys"

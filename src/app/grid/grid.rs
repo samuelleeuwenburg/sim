@@ -2,7 +2,6 @@ use super::{Entity, EntityKind, Position, Rect, Step, Trigger};
 use screech::core::ExternalSignal;
 use screech::traits::Source;
 use std::collections::HashMap;
-use web_sys::console;
 
 enum GridEntity {
     Step(Step),
@@ -95,7 +94,6 @@ impl Grid {
         self.entities
             .insert(*step.get_position(), GridEntity::Step(step));
 
-        console::log_1(&"addstep".into());
         self.connect();
     }
 
@@ -103,7 +101,6 @@ impl Grid {
         self.entities
             .insert(*trigger.get_position(), GridEntity::Trigger(trigger));
 
-        console::log_1(&"addtrigger".into());
         self.connect();
     }
 
@@ -143,7 +140,6 @@ impl Grid {
             let mut group = vec![(pos, step.output)];
 
             // @TODO: this could be written less error prone
-            console::log_1(&"looploop".into());
             'group: loop {
                 for conn in self.get_connections(pos) {
                     if let Some(GridEntity::Step(step)) = conn {
