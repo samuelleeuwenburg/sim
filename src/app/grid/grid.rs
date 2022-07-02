@@ -68,6 +68,10 @@ impl Grid {
         self.entities.get(pos).map(|e| e.as_entity())
     }
 
+    pub fn get_mut_entity(&mut self, pos: &Position) -> Option<&mut dyn Entity> {
+        self.entities.get_mut(pos).map(|e| e.as_mut_entity())
+    }
+
     pub fn get_entities(&self) -> Vec<&dyn Entity> {
         self.entities.values().map(|e| e.as_entity()).collect()
     }

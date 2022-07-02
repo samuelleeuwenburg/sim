@@ -2,6 +2,8 @@ use super::{Position, Step, Trigger};
 use crate::app::user_interface::DisplayEntity;
 use screech::traits::Source;
 use screech::{Input, Output};
+use std::error::Error;
+use std::fmt;
 
 pub enum EntityKind<'a> {
     Step(&'a Step),
@@ -19,6 +21,7 @@ pub trait Entity: Source {
     fn get_display(&self) -> DisplayEntity;
     fn get_prompt(&self) -> String;
     fn get_settings(&self) -> Vec<EntitySetting>;
+    fn update_setting(&mut self, setting: &EntitySetting);
     fn find_connections(
         &self,
         entity: &EntityKind,
@@ -30,6 +33,7 @@ pub trait Entity: Source {
     fn as_mut_source(&mut self) -> &mut dyn Source;
 }
 
+#[derive(Debug, Clone)]
 pub enum EntitySettingValue {
     Float(f32),
     Integer(usize),
@@ -44,6 +48,7 @@ impl EntitySettingValue {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct EntitySetting {
     pub value: EntitySettingValue,
     pub description: String,
@@ -55,5 +60,18 @@ impl EntitySetting {
             value,
             description: description.into(),
         }
+    }
+
+    pub fn try_update_value(&mut self, value: &str) -> Result<(), Box<dyn Error>> {
+        match self.value {
+            EntitySettingValue::Float(_) => {
+                self.value = EntitySettingValue::Float(value.parse::<f32>()?)
+            }
+            EntitySettingValue::Integer(_) => {
+                self.value = EntitySettingValue::Integer(value.parse::<usize>()?)
+            }
+        }
+
+        Ok(())
     }
 }

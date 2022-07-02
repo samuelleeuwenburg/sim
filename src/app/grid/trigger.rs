@@ -84,6 +84,14 @@ impl Entity for Trigger {
         ]
     }
 
+    fn update_setting(&mut self, setting: &EntitySetting) {
+        match (&setting.value, setting.description.as_str()) {
+            (EntitySettingValue::Float(v), "bpm") => self.bpm = *v,
+            (EntitySettingValue::Float(v), "div") => self.subdivision = *v,
+            _ => (),
+        }
+    }
+
     fn get_prompt(&self) -> String {
         String::from("t")
     }

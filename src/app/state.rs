@@ -65,8 +65,40 @@ impl State {
             Message::SetInput(input) => self.user_interface.input = input.clone(),
             Message::ClearInput => self.user_interface.input.clear(),
 
-            Message::ProcessInput => match self.input_mode {
-                InputMode::Edit(pos) => (),
+            Message::ProcessInput => match &self.input_mode {
+                InputMode::Edit(setting_pos) => {
+                    if let Some(settings) = &self.user_interface.settings {
+                        if let Some(setting) = settings.get(*setting_pos) {
+                            let mut new_setting = setting.clone();
+
+                            web_sys::console::log_1(
+                                &format!("editing: {:?}", setting.description).into(),
+                            );
+
+                            match new_setting.try_update_value(&self.user_interface.input) {
+                                Ok(_) => {
+                                    web_sys::console::log_1(
+                                        &format!("new value: {:?}", new_setting.value).into(),
+                                    );
+                                }
+                                Err(err) => {
+                                    web_sys::console::log_1(
+                                        &format!("parse error: {:?}", err).into(),
+                                    );
+                                }
+                            }
+
+                            if let Some(entity) =
+                                self.grid.get_mut_entity(&self.user_interface.cursor)
+                            {
+                                entity.update_setting(&new_setting);
+                            }
+                        }
+                    }
+
+                    self.process_message(&Message::ClearInput);
+                    self.process_message(&Message::UpdatePrompt);
+                }
                 _ => (),
             },
 

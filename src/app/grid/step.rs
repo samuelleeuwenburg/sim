@@ -124,6 +124,8 @@ impl Entity for Step {
         )]
     }
 
+    fn update_setting(&mut self, setting: &EntitySetting) {}
+
     fn get_prompt(&self) -> String {
         String::from(".")
     }

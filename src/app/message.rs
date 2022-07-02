@@ -113,7 +113,7 @@ impl Message {
 
             // movement
             (false, false, &[Input::C(' ')]) => vec![Message::Move(Position::new(1, 0))],
-            (false, false, &[Input::Enter]) => vec![Message::Move(Position::new(-10000, 1))],
+            (false, false, &[Input::Enter]) => vec![Message::Move(Position::new(0, 1))],
             (false, true, &[Input::Enter]) => vec![Message::Move(Position::new(0, 1))],
 
             // entities
@@ -138,7 +138,9 @@ impl Message {
             (false, false, &[Input::Tab]) => vec![Message::JumpSetting(1)],
             (false, true, &[Input::Tab]) => vec![Message::JumpSetting(-1)],
 
-            (false, false, &[Input::Enter]) => vec![Message::ProcessInput],
+            (false, false, &[Input::Enter]) | (false, false, &[.., Input::Enter]) => {
+                vec![Message::ProcessInput]
+            }
 
             _ => vec![],
         }
