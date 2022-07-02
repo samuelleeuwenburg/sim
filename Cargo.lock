@@ -131,9 +131,9 @@ checksum = "ea6a9290e3c9cf0f18145ef7ffa62d68ee0bf5fcd651017e586dc7fd5da448c2"
 
 [[package]]
 name = "screech"
-version = "0.9.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c52920871941e72f22ca7c2f5335d648319fb25dd948bd96e75914d0ae75dda0"
+checksum = "24e0646ad22c902efa368d06614b140056279331ae94578cc88f9901fdbbedf6"
 dependencies = [
  "libm",
  "rustc-hash",

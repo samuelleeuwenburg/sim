@@ -4,6 +4,8 @@ use super::input_state::{Input, InputMode, InputState};
 #[derive(Clone)]
 pub enum Message {
     SwitchInputMode(InputMode),
+    JumpSetting(i32),
+    ProcessInput,
     Move(Position),
     MoveTo(Position),
     MoveToEmpty,
@@ -32,6 +34,7 @@ impl Message {
         let commands = match state.mode {
             InputMode::Command => Self::mode_command(state, input),
             InputMode::Insert => Self::mode_insert(state, input),
+            InputMode::Edit(_) => Self::mode_edit(state, input),
         };
 
         match commands.as_slice() {
@@ -45,14 +48,18 @@ impl Message {
 
     fn mode_command(state: &InputState, input: &[Input]) -> Vec<Self> {
         match (state.control, state.shift, input) {
-            // input
+            // clear
             (true, false, &[.., Input::C('[')]) | (false, false, &[.., Input::Escape]) => {
                 vec![Message::ClearInput]
             }
 
-            // change mode
+            // change modes
             (false, false, &[.., Input::C('i')]) => {
                 vec![Message::SwitchInputMode(InputMode::Insert)]
+            }
+
+            (false, false, &[Input::Tab]) => {
+                vec![Message::SwitchInputMode(InputMode::Edit(0))]
             }
 
             // movement
@@ -116,6 +123,23 @@ impl Message {
             (false, false, &[Input::C('t')]) => {
                 vec![Message::AddTrigger, Message::MoveToEmpty]
             }
+            _ => vec![],
+        }
+    }
+
+    fn mode_edit(state: &InputState, input: &[Input]) -> Vec<Self> {
+        match (state.control, state.shift, input) {
+            // exit mode
+            (true, false, &[.., Input::C('[')]) | (false, false, &[.., Input::Escape]) => {
+                vec![Message::SwitchInputMode(InputMode::Command)]
+            }
+
+            // navigate settings
+            (false, false, &[Input::Tab]) => vec![Message::JumpSetting(1)],
+            (false, true, &[Input::Tab]) => vec![Message::JumpSetting(-1)],
+
+            (false, false, &[Input::Enter]) => vec![Message::ProcessInput],
+
             _ => vec![],
         }
     }

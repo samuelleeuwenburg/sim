@@ -33,7 +33,7 @@ impl WebAudio {
         current_time + self.buffer_size_in_seconds() >= self.buffer_position
     }
 
-    pub fn queue_new_buffer(&mut self, samples: &[f32]) -> Result<(), JsValue> {
+    pub fn queue_new_buffer(&mut self, samples: (&[f32], &[f32])) -> Result<(), JsValue> {
         // set next buffer_position
         self.move_buffer_size_forward();
 
@@ -48,24 +48,16 @@ impl WebAudio {
         Ok(())
     }
 
-    pub fn create_buffer_from_samples(&self, samples: &[f32]) -> Result<AudioBuffer, JsValue> {
+    pub fn create_buffer_from_samples(
+        &self,
+        (left, right): (&[f32], &[f32]),
+    ) -> Result<AudioBuffer, JsValue> {
         let channels = 2;
         let sample_rate = 48_000.0;
 
-        let mut left = vec![0.0; self.buffer_size / 2];
-        let mut right = vec![0.0; self.buffer_size / 2];
-
-        for (i, sample) in samples.iter().enumerate() {
-            if i % 2 != 0 {
-                left[i / 2] = *sample;
-            } else {
-                right[(i + 1) / 2] = *sample;
-            }
-        }
-
         let buffer = self
             .ctx
-            .create_buffer(channels, self.buffer_size as u32 / 2, sample_rate)?;
+            .create_buffer(channels, self.buffer_size as u32, sample_rate)?;
 
         buffer.copy_to_channel(&left, 0)?;
         buffer.copy_to_channel(&right, 1)?;

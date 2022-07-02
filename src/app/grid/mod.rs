@@ -5,7 +5,7 @@ mod rect;
 mod step;
 mod trigger;
 
-pub use entity::{Entity, EntityKind, EntityMutKind};
+pub use entity::{Entity, EntityKind, EntityMutKind, EntitySetting, EntitySettingValue};
 pub use grid::Grid;
 pub use position::Position;
 pub use rect::Rect;

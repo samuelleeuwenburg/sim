@@ -31,6 +31,7 @@ impl Input {
 pub enum InputMode {
     Command,
     Insert,
+    Edit(usize),
 }
 
 impl InputMode {
@@ -38,6 +39,7 @@ impl InputMode {
         match self {
             InputMode::Command => "",
             InputMode::Insert => "INS",
+            InputMode::Edit(_) => "EDT",
         }
     }
 }
@@ -96,7 +98,10 @@ impl InputState {
         match input {
             Input::Shift => self.shift = true,
             Input::Control => self.control = true,
-            Input::C(_) | Input::Escape | Input::Enter | Input::Backspace | Input::Tab => {
+            Input::Backspace => {
+                self.input_buffer.pop();
+            }
+            Input::C(_) | Input::Escape | Input::Enter | Input::Tab => {
                 self.input_buffer.push(input)
             }
             _ => (),

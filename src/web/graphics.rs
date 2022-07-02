@@ -34,10 +34,20 @@ impl WebGraphics {
 }
 
 impl Graphics for WebGraphics {
-    fn draw_text(&self, color: Color, x: f32, y: f32, text: &str) {
+    fn draw_text(&self, color: Color, x: f32, y: f32, w: f32, h: f32, text: &str) {
         self.set_fill_style(&color);
-        self.ctx.set_font("70px monospace");
-        self.ctx.fill_text(text, x as f64, y as f64).unwrap();
+        self.ctx.set_text_baseline("middle");
+        self.ctx.set_text_align("center");
+        self.ctx.set_font("42px monospace");
+
+        for (i, c) in text.chars().enumerate() {
+            let mut b = [0; 2];
+            let centered_x = x + w / 2.0 + i as f32 * w;
+            let centered_y = y + h / 2.0;
+            self.ctx
+                .fill_text(c.encode_utf8(&mut b), centered_x as f64, centered_y as f64)
+                .unwrap();
+        }
     }
 
     fn draw_rect(&self, color: Color, style: Style, x: f32, y: f32, w: f32, h: f32) {

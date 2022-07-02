@@ -16,25 +16,38 @@ impl Position {
         Position { x: 0, y: 0 }
     }
 
-    pub fn move_to(&mut self, pos: &Self) -> &mut Self {
+    pub fn move_to(mut self, pos: Self) -> Self {
         self.x = pos.x;
         self.y = pos.y;
         self
     }
 
-    pub fn add(&mut self, pos: &Self) -> &mut Self {
+    pub fn add(mut self, pos: Self) -> Self {
         self.x += pos.x;
         self.y += pos.y;
         self
     }
 
-    pub fn is_adjacent(&self, pos: &Self) -> bool {
-        let rect = Rect::new(3, 3, Position::new(pos.x - 1, pos.y - 1));
-
-        rect.intersect_position(pos) && pos != self
+    pub fn subtract(mut self, pos: Self) -> Self {
+        self.x -= pos.x;
+        self.y -= pos.y;
+        self
     }
 
-    pub fn clamp(&mut self, rect: &Rect) -> &mut Self {
+    pub fn invert(mut self) -> Self {
+        self.x = -self.x;
+        self.y = -self.y;
+        self
+    }
+
+    #[allow(dead_code)]
+    pub fn is_adjacent(&self, pos: Self) -> bool {
+        let rect = Rect::new(3, 3, Position::new(pos.x - 1, pos.y - 1));
+
+        rect.intersect_position(pos) && &pos != self
+    }
+
+    pub fn clamp(mut self, rect: &Rect) -> Self {
         let x_min = rect.position.x;
         let x_max = rect.position.x + rect.width - 1;
         let y_min = rect.position.y;

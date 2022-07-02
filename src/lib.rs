@@ -14,7 +14,7 @@ use web_sys::{DragEvent, HtmlCanvasElement, KeyboardEvent, Window};
 
 const BUFFER_SIZE: usize = 4800;
 
-static mut STATE: Option<State<BUFFER_SIZE>> = None;
+static mut STATE: Option<State> = None;
 static mut AUDIO: Option<WebAudio> = None;
 static mut GRAPHICS: Option<WebGraphics> = None;
 static mut INPUT_STATE: Option<InputState> = None;

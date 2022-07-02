@@ -16,6 +16,7 @@ impl Rect {
         }
     }
 
+    #[allow(dead_code)]
     pub fn intersect(&self, rect: &Rect) -> bool {
         !(rect.position.x > self.position.x + self.width
             || rect.position.x + rect.width < self.position.x
@@ -23,7 +24,8 @@ impl Rect {
             || rect.position.y + rect.height < self.position.y)
     }
 
-    pub fn intersect_position(&self, pos: &Position) -> bool {
+    #[allow(dead_code)]
+    pub fn intersect_position(&self, pos: Position) -> bool {
         pos.x >= self.position.x
             && pos.x <= self.position.x + self.width
             && pos.y >= self.position.y

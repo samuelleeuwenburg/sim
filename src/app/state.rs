@@ -1,28 +1,45 @@
 use super::grid::{Entity, Grid, Step, Trigger};
+use super::input_state::InputMode;
 use super::message::Message;
 use super::user_interface::{Graphics, UserInterface};
-use screech::core::{BasicTracker, Primary};
+use screech::{BasicTracker, Screech};
 
-pub struct State<const BUFFER_SIZE: usize> {
-    primary: Primary<BUFFER_SIZE>,
+pub struct State {
+    screech: Screech,
     grid: Grid,
+    input_mode: InputMode,
     pub user_interface: UserInterface,
 }
 
-impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
+impl State {
     pub fn new(sample_rate: usize) -> Self {
-        let tracker = Box::new(BasicTracker::<256, 8>::new());
+        let buffer_size = 256;
+        let tracker = Box::new(BasicTracker::<256>::new(buffer_size));
+        let mut screech = Screech::with_tracker(tracker, sample_rate);
+
+        // setup new output buffer
+        screech.create_main_out("left_out");
+        screech.create_main_out("right_out");
 
         State {
-            primary: Primary::with_tracker(tracker, sample_rate),
+            screech,
             grid: Grid::new(),
+            input_mode: InputMode::Command,
             user_interface: UserInterface::new(),
         }
     }
 
-    pub fn sample(&mut self) -> &[f32; BUFFER_SIZE] {
-        let sources = self.grid.get_mut_sources();
-        self.primary.sample(sources).unwrap()
+    pub fn sample(&mut self) -> (&[f32], &[f32]) {
+        let mut sources = self.grid.get_mut_sources();
+
+        if let Err(err) = self.screech.sample(&mut sources) {
+            web_sys::console::log_1(&format!("unable to sample screech: {:?}", err).into());
+        }
+
+        (
+            &self.screech.get_main_out("left_out").unwrap().samples,
+            &self.screech.get_main_out("right_out").unwrap().samples,
+        )
     }
 
     pub fn update_ui(&mut self) {
@@ -34,7 +51,7 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
     }
 
     pub fn render_ui(&self, g: &dyn Graphics) {
-        self.user_interface.render(g, &self.grid)
+        self.user_interface.render(g, &self.grid, self.input_mode)
     }
 
     pub fn process_messages(&mut self, messages: &[Message]) {
@@ -48,17 +65,24 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
             Message::SetInput(input) => self.user_interface.input = input.clone(),
             Message::ClearInput => self.user_interface.input.clear(),
 
+            Message::ProcessInput => match self.input_mode {
+                InputMode::Edit(pos) => (),
+                _ => (),
+            },
+
             Message::MoveTo(pos) => {
-                self.user_interface
+                self.user_interface.cursor = self
+                    .user_interface
                     .cursor
-                    .move_to(pos)
+                    .move_to(*pos)
                     .clamp(&self.grid.rect);
 
                 self.process_message(&Message::UpdatePrompt);
             }
 
             Message::Move(pos) => {
-                self.user_interface.cursor.add(pos).clamp(&self.grid.rect);
+                self.user_interface.cursor =
+                    self.user_interface.cursor.add(*pos).clamp(&self.grid.rect);
 
                 self.process_message(&Message::UpdatePrompt);
             }
@@ -69,40 +93,48 @@ impl<const BUFFER_SIZE: usize> State<BUFFER_SIZE> {
             }
 
             Message::UpdatePrompt => {
-                self.user_interface.prompt = self
-                    .grid
-                    .get_entity(&self.user_interface.cursor)
-                    .map(|e| e.get_prompt())
-                    .unwrap_or_else(|| "".into());
+                let entity = self.grid.get_entity(&self.user_interface.cursor);
+
+                self.user_interface.prompt =
+                    entity.map(|e| e.get_prompt()).unwrap_or_else(|| "".into());
+
+                self.user_interface.settings = entity.map(|e| e.get_settings());
             }
 
             Message::AddStep => {
                 if self.grid.is_empty(&self.user_interface.cursor) {
-                    let mut step = Step::new(&mut self.primary);
-                    step.set_position(&self.user_interface.cursor);
-                    self.grid.add_step(step);
-                } else {
-                    self.user_interface.prompt = "already occupied".into()
+                    let mut step = Step::new(&mut self.screech);
+                    step.set_position(self.user_interface.cursor);
+                    self.grid.add_step(&mut self.screech, step);
                 }
             }
 
             Message::AddTrigger => {
                 if self.grid.is_empty(&self.user_interface.cursor) {
-                    let mut trigger = Trigger::new(&mut self.primary);
-                    trigger.set_position(&self.user_interface.cursor);
-                    self.grid.add_trigger(trigger);
-                } else {
-                    self.user_interface.prompt = "already occupied".into()
+                    let mut trigger = Trigger::new(&mut self.screech);
+                    trigger.set_position(self.user_interface.cursor);
+                    self.grid.add_trigger(&mut self.screech, trigger);
                 }
             }
 
             Message::DeleteEntity => {
-                self.grid.remove_entity(&self.user_interface.cursor);
-                self.user_interface.prompt.clear();
+                self.grid
+                    .remove_entity(&mut self.screech, &self.user_interface.cursor);
             }
 
             Message::SwitchInputMode(mode) => {
-                self.user_interface.mode = mode.get_prompt();
+                self.input_mode = *mode;
+            }
+
+            Message::JumpSetting(amount) => {
+                match (self.input_mode, &self.user_interface.settings) {
+                    (InputMode::Edit(pos), Some(settings)) => {
+                        let new_pos =
+                            ((pos + settings.len()) as i32 + amount) % settings.len() as i32;
+                        self.input_mode = InputMode::Edit(new_pos as usize);
+                    }
+                    _ => (),
+                }
             }
         }
     }

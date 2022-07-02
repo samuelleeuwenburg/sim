@@ -1,6 +1,6 @@
 use super::{Entity, EntityKind, Position, Rect, Step, Trigger};
-use screech::core::ExternalSignal;
 use screech::traits::Source;
+use screech::Screech;
 use std::collections::HashMap;
 
 enum GridEntity {
@@ -60,9 +60,8 @@ impl Grid {
         !self.entities.contains_key(&pos)
     }
 
-    pub fn remove_entity(&mut self, pos: &Position) {
+    pub fn remove_entity(&mut self, screech: &mut Screech, pos: &Position) {
         self.entities.remove(pos);
-        self.connect();
     }
 
     pub fn get_entity(&self, pos: &Position) -> Option<&dyn Entity> {
@@ -90,213 +89,60 @@ impl Grid {
         sources
     }
 
-    pub fn add_step(&mut self, step: Step) {
-        self.entities
-            .insert(*step.get_position(), GridEntity::Step(step));
+    pub fn add_step(&mut self, screech: &mut Screech, step: Step) {
+        let pos = step.get_position();
+        self.entities.insert(pos, GridEntity::Step(step));
 
-        self.connect();
+        self.connect(screech, &pos);
     }
 
-    pub fn add_trigger(&mut self, trigger: Trigger) {
-        self.entities
-            .insert(*trigger.get_position(), GridEntity::Trigger(trigger));
+    pub fn add_trigger(&mut self, screech: &mut Screech, trigger: Trigger) {
+        let pos = trigger.get_position();
+        self.entities.insert(pos, GridEntity::Trigger(trigger));
 
-        self.connect();
+        self.connect(screech, &pos);
     }
 
-    fn get_connections(&self, pos: Position) -> [Option<&GridEntity>; 4] {
-        [
-            self.entities.get(&Position::new(pos.x + 1, pos.y)),
-            self.entities.get(&Position::new(pos.x - 1, pos.y)),
-            self.entities.get(&Position::new(pos.x, pos.y + 1)),
-            self.entities.get(&Position::new(pos.x, pos.y - 1)),
+    pub fn connect(&mut self, screech: &mut Screech, pos: &Position) {
+        let entity = self
+            .entities
+            .get(&pos)
+            .expect("missing target entity when making connections");
+
+        let entities: Vec<&GridEntity> = [
+            Position::new(pos.x, pos.y - 1), // north
+            Position::new(pos.x + 1, pos.y), // east
+            Position::new(pos.x, pos.y + 1), // south
+            Position::new(pos.x - 1, pos.y), // west
         ]
-    }
+        .iter()
+        .filter_map(|pos| self.entities.get(&pos))
+        .collect();
 
-    pub fn connect(&mut self) {
-        let mut step_groups: Vec<Vec<(Position, ExternalSignal)>> = vec![];
+        let mut conns = vec![];
 
-        let mut steps: Vec<&Step> = self
-            .entities
-            .values()
-            .filter_map(|e| match e {
-                GridEntity::Step(s) => Some(s),
-                _ => None,
-            })
-            .collect();
+        for e in entities {
+            let relative_pos = e
+                .as_entity()
+                .get_position()
+                .subtract(entity.as_entity().get_position());
 
-        steps.sort_by(|a, b| a.get_position().partial_cmp(b.get_position()).unwrap());
+            conns.append(
+                &mut entity
+                    .as_entity()
+                    .find_connections(&e.as_entity().as_kind(), relative_pos),
+            );
 
-        let mut visited: HashMap<Position, bool> = HashMap::new();
-
-        for step in steps.iter() {
-            // skip already visited steps
-            if visited.get(step.get_position()).is_some() {
-                continue;
-            }
-
-            let mut pos = *step.get_position();
-            visited.insert(pos, true);
-            let mut group = vec![(pos, step.output)];
-
-            // @TODO: this could be written less error prone
-            'group: loop {
-                for conn in self.get_connections(pos) {
-                    if let Some(GridEntity::Step(step)) = conn {
-                        if visited.get(step.get_position()).is_some() {
-                            continue;
-                        }
-
-                        visited.insert(*step.get_position(), true);
-                        group.push((*step.get_position(), step.output));
-                        pos = *step.get_position();
-                        continue 'group;
-                    }
-                }
-
-                break;
-            }
-
-            step_groups.push(group);
+            conns.append(
+                &mut e
+                    .as_entity()
+                    .find_connections(&entity.as_entity().as_kind(), relative_pos.invert()),
+            );
         }
 
-        // connect steps:
-        for group in step_groups {
-            let mut signal: Option<ExternalSignal> = None;
-
-            for (pos, _) in group {
-                if let Some(GridEntity::Step(step)) = self.entities.get_mut(&pos) {
-                    step.clear_connections();
-
-                    if let Some(s) = signal {
-                        step.add_input(&s);
-                    }
-
-                    signal = Some(step.output);
-                }
-            }
+        for (output, input) in conns {
+            web_sys::console::log_1(&format!("{:?} : {:?}", output, input).into());
+            screech.connect_signal(&output, &input);
         }
-
-        // connect triggers to steps
-        let mut trigger_connections: Vec<(Position, ExternalSignal)> = vec![];
-
-        let triggers: Vec<&Trigger> = self
-            .entities
-            .values()
-            .filter_map(|e| match e {
-                GridEntity::Trigger(t) => Some(t),
-                _ => None,
-            })
-            .collect();
-
-        for trigger in triggers {
-            for conn in self.get_connections(*trigger.get_position()) {
-                if let Some(GridEntity::Step(step)) = conn {
-                    trigger_connections.push((*step.get_position(), trigger.output));
-                }
-            }
-        }
-
-        for (pos, signal) in trigger_connections {
-            if let Some(GridEntity::Step(step)) = self.entities.get_mut(&pos) {
-                step.add_input(&signal);
-            }
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use screech::core::Primary;
-
-    #[test]
-    fn test_chain_steps() {
-        let mut primary = Primary::<4>::new(4);
-
-        let mut steps = [
-            Step::new(&mut primary),
-            Step::new(&mut primary),
-            Step::new(&mut primary),
-            Step::new(&mut primary),
-            Step::new(&mut primary),
-            Step::new(&mut primary),
-            Step::new(&mut primary),
-            Step::new(&mut primary),
-            Step::new(&mut primary),
-        ];
-
-        // simple group
-        steps[0].set_position(&Position::new(0, 0));
-        steps[1].set_position(&Position::new(1, 0));
-        steps[2].set_position(&Position::new(2, 0));
-        steps[3].set_position(&Position::new(3, 0));
-        // multiline group
-        steps[4].set_position(&Position::new(2, 2));
-        steps[5].set_position(&Position::new(3, 2));
-        steps[6].set_position(&Position::new(3, 3));
-        steps[7].set_position(&Position::new(2, 3));
-        steps[8].set_position(&Position::new(2, 4));
-
-        let mut grid = Grid::new();
-
-        for step in steps {
-            grid.add_step(step);
-        }
-
-        let mut sources: Vec<(usize, Vec<usize>)> = grid
-            .get_mut_sources()
-            .into_iter()
-            .map(|s| (*s.get_source_id(), s.get_sources()))
-            .collect();
-
-        sources.sort();
-
-        assert_eq!(
-            sources,
-            vec![
-                // simple group
-                (0, vec![]),
-                (1, vec![0]),
-                (2, vec![1]),
-                (3, vec![2]),
-                // multiline group
-                (4, vec![]),
-                (5, vec![4]),
-                (6, vec![5]),
-                (7, vec![6]),
-                (8, vec![7]),
-            ]
-        );
-    }
-
-    #[test]
-    fn test_trigger_steps() {
-        let mut primary = Primary::<4>::new(4);
-
-        let mut trigger = Trigger::new(&mut primary);
-        trigger.set_position(&Position::new(0, 0));
-
-        let mut steps = [Step::new(&mut primary)];
-
-        steps[0].set_position(&Position::new(1, 0));
-
-        let mut grid = Grid::new();
-
-        grid.add_trigger(trigger);
-
-        for step in steps {
-            grid.add_step(step);
-        }
-
-        let mut sources: Vec<(usize, Vec<usize>)> = grid
-            .get_mut_sources()
-            .into_iter()
-            .map(|s| (*s.get_source_id(), s.get_sources()))
-            .collect();
-
-        sources.sort();
-
-        assert_eq!(sources, vec![(0, vec![]), (1, vec![0]),]);
     }
 }
