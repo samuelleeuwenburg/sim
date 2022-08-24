@@ -1,0 +1,19 @@
+{
+  "name": "sim-web-client",
+  "version": "0.0.1",
+  "description": "",
+  "scripts": {
+    "dev": "npm run wasm && vite",
+    "wasm": "wasm-pack build ./sim-web-client --target web",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "vite-plugin-checker": "^0.4.6",
+    "vite-plugin-wasm-pack": "^0.1.12"
+  },
+  "devDependencies": {
+    "typescript": "^4.6.3",
+    "vite": "^2.9.5"
+  }
+}
