@@ -1,4 +1,5 @@
 use super::{Entity, EntityKind, EntityMutKind, Setting, SettingValue};
+use crate::Image;
 use crate::grid::Position;
 use screech::traits::{Source, Tracker};
 use screech::{Input, Output, Screech};
@@ -100,37 +101,41 @@ impl Entity for Step {
         self.grid_position
     }
 
-    fn get_settings(&self) -> Vec<Setting> {
-        vec![Setting::new(SettingValue::Integer(self.charge), "cap")]
+    fn get_grid_display(&self) -> Option<Image> {
+	None
     }
 
-    fn update_setting(&mut self, setting: &Setting) {}
-
-    fn get_prompt(&self) -> String {
-        String::from(".")
+    fn get_detail_display(&self) -> Option<Image> {
+	None
     }
 
-    fn find_connections(
-        &self,
-        entity: &EntityKind,
-        relative_position: Position,
-    ) -> Vec<(Output, Input)> {
-        let mut conns = vec![];
+    // fn get_settings(&self) -> Vec<Setting> {
+    //     vec![Setting::new(SettingValue::Integer(self.charge), "cap")]
+    // }
 
-        match (entity, relative_position) {
-            (EntityKind::Trigger(trigger), Position { x: 0, y: -1 })
-            | (EntityKind::Trigger(trigger), Position { x: -1, y: 0 }) => {
-                conns.push((trigger.output, self.input));
-            }
-            (EntityKind::Step(step), Position { x: 0, y: -1 })
-            | (EntityKind::Step(step), Position { x: -1, y: 0 }) => {
-                conns.push((step.output, self.input));
-            }
-            _ => (),
-        }
+    //fn update_setting(&mut self, _setting: &Setting) {}
 
-        conns
-    }
+    //fn find_connections(
+    //    &self,
+    //    entity: &EntityKind,
+    //    relative_position: Position,
+    //) -> Vec<(Output, Input)> {
+    //    let mut conns = vec![];
+
+    //    match (entity, relative_position) {
+    //        (EntityKind::Trigger(trigger), Position { x: 0, y: -1 })
+    //        | (EntityKind::Trigger(trigger), Position { x: -1, y: 0 }) => {
+    //            conns.push((trigger.output, self.input));
+    //        }
+    //        (EntityKind::Step(step), Position { x: 0, y: -1 })
+    //        | (EntityKind::Step(step), Position { x: -1, y: 0 }) => {
+    //            conns.push((step.output, self.input));
+    //        }
+    //        _ => (),
+    //    }
+
+    //    conns
+    //}
 
     fn as_kind(&self) -> EntityKind {
         EntityKind::Step(self)
@@ -139,8 +144,4 @@ impl Entity for Step {
     fn as_mut_kind(&mut self) -> EntityMutKind {
         EntityMutKind::Step(self)
     }
-
-    // fn as_mut_source(&mut self) -> &mut dyn Source {
-    //     self
-    // }
 }

@@ -3,5 +3,30 @@
 version = 3
 
 [[package]]
+name = "libm"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "292a948cd991e376cf75541fe5b97a1081d713c618b4f1b9500f8844e49eb565"
+
+[[package]]
+name = "rustc-hash"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
+
+[[package]]
+name = "screech"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "24e0646ad22c902efa368d06614b140056279331ae94578cc88f9901fdbbedf6"
+dependencies = [
+ "libm",
+ "rustc-hash",
+]
+
+[[package]]
 name = "sim"
 version = "0.1.0"
+dependencies = [
+ "screech",
+]

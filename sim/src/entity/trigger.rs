@@ -1,10 +1,11 @@
 use super::{Entity, EntityKind, EntityMutKind, Setting, SettingValue};
+use crate::Image;
 use crate::grid::Position;
 use screech::traits::{Source, Tracker};
 use screech::{Input, Output, Screech};
 
 pub struct Trigger {
-    id: usize,
+    // id: usize,
     grid_position: Position,
     bpm: f32,
     subdivision: f32,
@@ -17,7 +18,7 @@ impl Trigger {
         let id = screech.create_source_id();
 
         Trigger {
-            id,
+            // id,
             grid_position: Position::origin(),
             output: screech.init_output(&id, "output"),
             bpm: 480.0,
@@ -61,32 +62,37 @@ impl Entity for Trigger {
         self.grid_position
     }
 
-    fn get_settings(&self) -> Vec<Setting> {
-        vec![
-            Setting::new(SettingValue::Float(self.bpm), "bpm"),
-            Setting::new(SettingValue::Float(self.subdivision), "div"),
-        ]
+
+    fn get_grid_display(&self) -> Option<Image> {
+	None
     }
 
-    fn update_setting(&mut self, setting: &Setting) {
-        match (&setting.value, setting.description.as_str()) {
-            (SettingValue::Float(v), "bpm") => self.bpm = *v,
-            (SettingValue::Float(v), "div") => self.subdivision = *v,
-            _ => (),
-        }
+    fn get_detail_display(&self) -> Option<Image> {
+	None
     }
 
-    fn get_prompt(&self) -> String {
-        String::from("t")
-    }
+    // fn get_settings(&self) -> Vec<Setting> {
+    //     vec![
+    //         Setting::new(SettingValue::Float(self.bpm), "bpm"),
+    //         Setting::new(SettingValue::Float(self.subdivision), "div"),
+    //     ]
+    // }
 
-    fn find_connections(
-        &self,
-        _entity: &EntityKind,
-        _relative_position: Position,
-    ) -> Vec<(Output, Input)> {
-        vec![]
-    }
+    // fn update_setting(&mut self, setting: &Setting) {
+    //     match (&setting.value, setting.description.as_str()) {
+    //         (SettingValue::Float(v), "bpm") => self.bpm = *v,
+    //         (SettingValue::Float(v), "div") => self.subdivision = *v,
+    //         _ => (),
+    //     }
+    // }
+
+    // fn find_connections(
+    //     &self,
+    //     _entity: &EntityKind,
+    //     _relative_position: Position,
+    // ) -> Vec<(Output, Input)> {
+    //     vec![]
+    // }
 
     fn as_kind(&self) -> EntityKind {
         EntityKind::Trigger(self)
@@ -95,8 +101,4 @@ impl Entity for Trigger {
     fn as_mut_kind(&mut self) -> EntityMutKind {
         EntityMutKind::Trigger(self)
     }
-
-    // fn as_mut_source(&mut self) -> &mut dyn Source {
-    //     self
-    // }
 }
