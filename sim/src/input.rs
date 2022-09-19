@@ -29,4 +29,8 @@ impl InputState {
     pub fn key_up(&mut self, input: Input) {
         self.is_key_down.insert(input, false);
     }
+
+    pub fn clear_buffer(&mut self) {
+	self.buffer.clear();
+    }
 }

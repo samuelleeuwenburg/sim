@@ -64,6 +64,7 @@ startButton &&
     const renderBuffer = allocate_u8_buffer(renderBufferSize);
 
     const graphicsCallback = () => {
+      ctx.clearRect(0, 0, viewportWidth, viewportHeight);
       render_image(renderBuffer, renderBufferSize);
       const buffer = get_u8_buffer(renderBuffer, renderBufferSize);
       const imageData = new ImageData(buffer, viewportWidth, viewportHeight);

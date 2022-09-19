@@ -1,14 +1,22 @@
 use sim::{Color, Graphics, Image};
 
 pub struct WebGraphics {
-    pub canvas: Image,
+    canvas: Image,
+    scale: usize,
 }
 
 impl WebGraphics {
-    pub fn new(width: i32, height: i32) -> Self {
+    pub fn new(width: i32, height: i32, scale: usize) -> Self {
         WebGraphics {
-	    canvas: Image::new(width, height),
+	    canvas: Image::new(width / scale as i32, height / scale as i32),
+	    scale,
 	}
+    }
+
+    pub fn render_image(&self) -> Image {
+	let mut image = self.canvas.clone();
+	image.scale(self.scale);
+	image
     }
 }
 

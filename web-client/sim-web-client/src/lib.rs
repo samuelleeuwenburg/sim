@@ -59,7 +59,7 @@ pub fn init_sim(sample_rate: usize, buffer_size: usize, width: i32, height: i32)
     let _ = ui.insert(UserInterface::new());
 
     let mut graphics = GRAPHICS.lock().unwrap();
-    let _ = graphics.insert(WebGraphics::new(width, height));
+    let _ = graphics.insert(WebGraphics::new(width, height, 4));
 
     let mut input = INPUT.lock().unwrap();
     let _ = input.insert(InputState::new());
@@ -105,12 +105,13 @@ pub fn render_image(pointer: *mut u8, size: usize) {
     match (grid.as_ref(), ui.as_mut(), graphics.as_mut()) {
 	(Some(grid), Some(ui), Some(graphics)) => {
 	    ui.render(graphics, grid);
+	    let image = graphics.render_image();
 
-	    assert_eq!(size, graphics.canvas.data.len() * 4);
+	    assert_eq!(size, image.data.len() * 4);
 
 	    let mut buffer = unsafe { slice::from_raw_parts_mut(pointer, size) };
 
-	    for (i, color) in graphics.canvas.data.iter().enumerate() {
+	    for (i, color) in image.data.iter().enumerate() {
 		buffer[i * 4] = color.red;
 		buffer[i * 4 + 1] = color.green;
 		buffer[i * 4 + 2] = color.blue;
