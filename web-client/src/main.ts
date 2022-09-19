@@ -15,13 +15,20 @@ const sampleRate = 48000;
 const bufferSize = 256;
 const bufferSizeInSeconds = bufferSize / 48_000 / 2;
 
-const viewportWidth = 400;
-const viewportHeight = 400;
+const viewportWidth = 1080;
+const viewportHeight = 720;
 
 const startButton = document.querySelector("button#start");
 
-const handleKeyDown = (e: KeyboardEvent) => handle_key_down(e.key);
-const handleKeyUp = (e: KeyboardEvent) => handle_key_up(e.key);
+const handleKeyDown = (e: KeyboardEvent) => {
+  e.preventDefault();
+  handle_key_down(e.key);
+};
+
+const handleKeyUp = (e: KeyboardEvent) => {
+  e.preventDefault();
+  handle_key_up(e.key);
+};
 
 startButton &&
   startButton.addEventListener("click", () => {

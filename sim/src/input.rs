@@ -9,8 +9,8 @@ pub enum Input {
 }
 
 pub struct InputState {
-    buffer: Vec<Input>,
-    is_key_down: HashMap<Input, bool>,
+    pub buffer: Vec<Input>,
+    pub is_key_down: HashMap<Input, bool>,
 }
 
 impl InputState {

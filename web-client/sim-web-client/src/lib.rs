@@ -59,17 +59,10 @@ pub fn init_sim(sample_rate: usize, buffer_size: usize, width: i32, height: i32)
     let _ = ui.insert(UserInterface::new());
 
     let mut graphics = GRAPHICS.lock().unwrap();
-    let _ = graphics.insert(WebGraphics::new(width, height, 4));
+    let _ = graphics.insert(WebGraphics::new(width, height, 5));
 
     let mut input = INPUT.lock().unwrap();
     let _ = input.insert(InputState::new());
-}
-
-#[wasm_bindgen]
-pub fn process_input() {
-    let mut audio = AUDIO.lock().unwrap();
-    let mut grid = GRID.lock().unwrap();
-    let mut input_state = INPUT.lock().unwrap();
 }
 
 #[wasm_bindgen]
@@ -101,11 +94,15 @@ pub fn render_image(pointer: *mut u8, size: usize) {
     let mut ui = UI.lock().unwrap();
     let mut graphics = GRAPHICS.lock().unwrap();
     let grid = GRID.lock().unwrap();
+    let mut input_state = INPUT.lock().unwrap();
 
-    match (grid.as_ref(), ui.as_mut(), graphics.as_mut()) {
-	(Some(grid), Some(ui), Some(graphics)) => {
+    match (grid.as_ref(), ui.as_mut(), graphics.as_mut(), input_state.as_mut()) {
+	(Some(grid), Some(ui), Some(graphics), Some(input_state)) => {
+	    ui.process_input(input_state);
+	    input_state.clear_buffer();
 	    ui.render(graphics, grid);
 	    let image = graphics.render_image();
+
 
 	    assert_eq!(size, image.data.len() * 4);
 
