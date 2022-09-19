@@ -1,6 +1,8 @@
 mod utils;
 mod web_graphics;
 use web_sys::console;
+use js_sys::{Float32Array, Uint8ClampedArray};
+use wasm_bindgen::__rt::core::{mem, slice};
 
 use sim::{Audio, Grid, Input, InputState, UserInterface};
 use std::sync::Mutex;
@@ -18,6 +20,32 @@ static GRID: Mutex<Option<Grid>> = Mutex::new(None);
 static UI: Mutex<Option<UserInterface>> = Mutex::new(None);
 static GRAPHICS: Mutex<Option<WebGraphics>> = Mutex::new(None);
 static INPUT: Mutex<Option<InputState>> = Mutex::new(None);
+
+#[wasm_bindgen]
+pub fn allocate_u8_buffer(size: usize) -> *mut u8 {
+    let mut buf = Vec::with_capacity(size);
+    let ptr = buf.as_mut_ptr();
+    std::mem::forget(buf);
+    ptr
+}
+
+#[wasm_bindgen]
+pub fn allocate_f32_buffer(size: usize) -> *mut f32 {
+    let mut buf = Vec::with_capacity(size);
+    let ptr = buf.as_mut_ptr();
+    std::mem::forget(buf);
+    ptr
+}
+
+#[wasm_bindgen]
+pub fn get_u8_buffer(ptr: *mut u8, size: usize) -> Uint8ClampedArray {
+    unsafe { Uint8ClampedArray::view(std::slice::from_raw_parts(ptr, size)) }
+}
+
+#[wasm_bindgen]
+pub fn get_f32_buffer(ptr: *mut f32, size: usize) -> Float32Array {
+    unsafe { Float32Array::view(std::slice::from_raw_parts(ptr, size)) }
+}
 
 #[wasm_bindgen]
 pub fn init_sim(sample_rate: usize, buffer_size: usize, width: i32, height: i32) {
@@ -38,41 +66,58 @@ pub fn init_sim(sample_rate: usize, buffer_size: usize, width: i32, height: i32)
 }
 
 #[wasm_bindgen]
-pub fn sample() -> Vec<f32> {
+pub fn process_input() {
     let mut audio = AUDIO.lock().unwrap();
     let mut grid = GRID.lock().unwrap();
+    let mut input_state = INPUT.lock().unwrap();
+}
 
-    let mut samples = vec![];
+#[wasm_bindgen]
+pub fn sample(pointer: *mut f32, size: usize) {
+    let mut audio = AUDIO.lock().unwrap();
+    let mut grid = GRID.lock().unwrap();
 
     match (grid.as_mut(), audio.as_mut()) {
         (Some(mut grid), Some(audio)) => {
             let (l, r) = audio.sample(&mut grid);
-            samples.extend(l);
-            samples.extend(r);
+	    let mut buffer = unsafe { slice::from_raw_parts_mut(pointer, size) };
+
+	    assert_eq!(l.len() + r.len(), size);
+
+	    for (i, s) in l.iter().enumerate() {
+	    	buffer[i] = *s;
+	    }
+
+	    for (i, s) in l.iter().enumerate() {
+	    	buffer[size / 2 + i] = *s;
+	    }
         }
         _ => (),
     }
-
-    samples
 }
 
 #[wasm_bindgen]
-pub fn get_render_instructions() -> Option<String> {
+pub fn render_image(pointer: *mut u8, size: usize) {
     let mut ui = UI.lock().unwrap();
     let mut graphics = GRAPHICS.lock().unwrap();
     let grid = GRID.lock().unwrap();
 
     match (grid.as_ref(), ui.as_mut(), graphics.as_mut()) {
-        (Some(grid), Some(ui), Some(graphics)) => {
-            ui.render(graphics, grid);
+	(Some(grid), Some(ui), Some(graphics)) => {
+	    ui.render(graphics, grid);
 
-            let json = serde_json::to_string(graphics.get_instructions()).unwrap();
+	    assert_eq!(size, graphics.canvas.data.len() * 4);
 
-            graphics.clear_instructions();
+	    let mut buffer = unsafe { slice::from_raw_parts_mut(pointer, size) };
 
-            Some(json)
-        }
-        _ => None,
+	    for (i, color) in graphics.canvas.data.iter().enumerate() {
+		buffer[i * 4] = color.red;
+		buffer[i * 4 + 1] = color.green;
+		buffer[i * 4 + 2] = color.blue;
+		buffer[i * 4 + 3] = color.alpha;
+	    }
+	}
+	_ => (),
     }
 }
 

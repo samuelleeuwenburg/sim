@@ -23,10 +23,10 @@ impl InputState {
 
     pub fn key_down(&mut self, input: Input) {
         self.buffer.push(input);
-	self.is_key_down.insert(input, true);
+        self.is_key_down.insert(input, true);
     }
 
     pub fn key_up(&mut self, input: Input) {
-	self.is_key_down.insert(input, false);
+        self.is_key_down.insert(input, false);
     }
 }

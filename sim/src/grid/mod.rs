@@ -6,15 +6,17 @@ pub use position::Position;
 pub use rect::Rect;
 
 pub struct Grid {
-    pub rect: Rect,
+    pub cursor_position: Position,
+    pub window_position: Position,
     entities: Vec<Box<dyn Entity>>,
 }
 
 impl Grid {
     pub fn new() -> Self {
         Grid {
-            rect: Rect::new(33, 17, Position::origin()),
-	    entities: vec![],
+            cursor_position: Position::origin(),
+            window_position: Position::origin(),
+            entities: vec![],
         }
     }
 

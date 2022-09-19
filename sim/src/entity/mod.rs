@@ -2,8 +2,8 @@ mod setting;
 mod step;
 mod trigger;
 
-use crate::Image;
 use crate::grid::Position;
+use crate::Image;
 use screech::traits::Source;
 // use screech::{Input, Output};
 pub use setting::{Setting, SettingValue};

@@ -1,6 +1,6 @@
 use super::{Entity, EntityKind, EntityMutKind, Setting, SettingValue};
-use crate::Image;
 use crate::grid::Position;
+use crate::Image;
 use screech::traits::{Source, Tracker};
 use screech::{Input, Output, Screech};
 use std::cmp;
@@ -102,11 +102,11 @@ impl Entity for Step {
     }
 
     fn get_grid_display(&self) -> Option<Image> {
-	None
+        None
     }
 
     fn get_detail_display(&self) -> Option<Image> {
-	None
+        None
     }
 
     // fn get_settings(&self) -> Vec<Setting> {

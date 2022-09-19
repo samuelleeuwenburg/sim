@@ -1,7 +1,11 @@
 import init, {
   init_sim,
+  allocate_u8_buffer,
+  allocate_f32_buffer,
+  get_u8_buffer,
+  get_f32_buffer,
   sample,
-  get_render_instructions,
+  render_image,
   handle_key_down,
   handle_key_up,
 } from "sim-web-client";
@@ -26,6 +30,8 @@ startButton &&
       sampleRate,
     });
 
+    // left + right channel
+    const audioBuffer = allocate_f32_buffer(bufferSize * 2);
     let bufferPos = audioCtx.currentTime;
 
     const audioCallback = () => {
@@ -33,13 +39,14 @@ startButton &&
         // move buffer position forward
         bufferPos += bufferSizeInSeconds;
 
-        // get the samples
-        const samples = sample();
+        // load new samples from wasm and get the samples
+        sample(audioBuffer, bufferSize * 2);
+        const samples = get_f32_buffer(audioBuffer, bufferSize * 2);
 
         // create buffer
         const buffer = audioCtx.createBuffer(channels, bufferSize, sampleRate);
-        buffer.copyToChannel(samples.slice(0, bufferSize / 2), 0);
-        buffer.copyToChannel(samples.slice(bufferSize / 2), 1);
+        buffer.copyToChannel(samples.slice(0, bufferSize), 0);
+        buffer.copyToChannel(samples.slice(bufferSize), 1);
 
         // create source
         const source = audioCtx.createBufferSource();
@@ -51,26 +58,16 @@ startButton &&
 
     const canvas = document.getElementById("viewport") as HTMLCanvasElement;
     canvas.width = viewportWidth;
-    canvas.height = viewportWidth;
+    canvas.height = viewportHeight;
     const ctx = canvas.getContext("2d")!;
+    const renderBufferSize = viewportWidth * viewportHeight * 4;
+    const renderBuffer = allocate_u8_buffer(renderBufferSize);
 
     const graphicsCallback = () => {
-      const json = get_render_instructions();
-      const instructions = json && JSON.parse(json);
-
-      instructions &&
-        instructions.forEach((instruction: any) => {
-          if (instruction === "Clear") {
-            ctx.clearRect(0, 0, viewportWidth, viewportHeight);
-          } else if (instruction.Rect) {
-            const [x, y, w, h] = instruction.Rect;
-            ctx.fillRect(x, y, w, h);
-          } else if (instruction.Image) {
-            const [x, y, w, h, data] = instruction.Image;
-            const imageData = new ImageData(Uint8ClampedArray.from(data), w, h);
-            ctx.putImageData(imageData, x, y);
-          }
-        });
+      render_image(renderBuffer, renderBufferSize);
+      const buffer = get_u8_buffer(renderBuffer, renderBufferSize);
+      const imageData = new ImageData(buffer, viewportWidth, viewportHeight);
+      ctx.putImageData(imageData, 0, 0);
 
       window.requestAnimationFrame(graphicsCallback);
     };
