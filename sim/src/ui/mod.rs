@@ -14,37 +14,79 @@ static DETAIL_VIEW_HEIGHT: i32 = 80;
 static VIEW_BORDER: i32 = 1;
 static VIEW_MARGIN: i32 = 4;
 
+#[derive(PartialEq)]
+enum ActiveView {
+    Grid,
+    Detail,
+}
+
 pub struct UserInterface {
-    view_color: Color,
+    select_color: Color,
+    background_color: Color,
     grid_block_size: (i32, i32),
     font_size: (i32, i32),
-    pub prompt: String,
+    prompt: String,
+    prompt_is_active: bool,
+    active_view: ActiveView,
 }
 
 impl UserInterface {
     pub fn new() -> Self {
         UserInterface {
-	    view_color: Color::new(00, 209, 255, 255),
+	    select_color: Color::new(00, 209, 255, 255),
+	    background_color: Color::new(0, 0, 0, 255),
             grid_block_size: (8, 8),
             font_size: (8, 8),
-            prompt: String::from("please type..."),
+            prompt: String::from(""),
+	    prompt_is_active: false,
+	    active_view: ActiveView::Grid,
         }
     }
 
-    pub fn process_input(&mut self, input: &InputState) {
-        for input in &input.buffer {
-            match input {
-                Input::Char(c) => {
-                    self.prompt.push(*c);
-                }
-                Input::Enter => {
-                    self.prompt.clear();
-                }
-                Input::Backspace => {
-                    self.prompt.pop();
-                }
-                _ => (),
-            }
+    pub fn process_input(&mut self, input_state: &InputState) {
+        for input in &input_state.buffer {
+	    if self.prompt_is_active {
+		match input {
+		    Input::Char(c) => {
+			self.prompt.push(*c);
+		    }
+		    Input::Enter => {
+			self.prompt.clear();
+		    }
+		    Input::Backspace => {
+			self.prompt.pop();
+		    }
+		    Input::Escape => {
+			self.prompt_is_active = false;
+		    }
+		    _ => (),
+		}
+	    } else {
+		match input {
+		    Input::Char('>') => {
+			self.prompt_is_active = true;
+		    }
+		    _ => (),
+		}
+		match self.active_view {
+		    ActiveView::Grid => {
+			match input {
+			    Input::Tab => {
+				self.active_view = ActiveView::Detail;
+			    }
+			    _ => (),
+			}
+		    }
+		    ActiveView::Detail => {
+			match input {
+			    Input::Tab => {
+				self.active_view = ActiveView::Grid;
+			    }
+			    _ => (),
+			}
+		    }
+		};
+	    }
         }
     }
 
@@ -62,24 +104,44 @@ impl UserInterface {
         g.draw_rect(Color::new(0, 0, 0, 255), 0, 0, w, h);
     }
 
-    fn render_grid(&mut self, g: &mut dyn Graphics, grid: &Grid) {
+    fn render_grid(&self, g: &mut dyn Graphics, grid: &Grid) {
         let (vw, vh) = g.get_viewport();
         let (_, fh) = self.font_size;
 
-	let grid_area_height = vh - DETAIL_VIEW_HEIGHT - fh;
+	if self.active_view == ActiveView::Grid {
+	    let x = VIEW_MARGIN;
+	    let y = VIEW_MARGIN;
+	    let w = vw - VIEW_MARGIN * 2;
+	    let h = vh - DETAIL_VIEW_HEIGHT - fh - VIEW_MARGIN * 4;
+
+	    let mut color = self.select_color;
+	    if self.prompt_is_active {
+		color.alpha = 128;
+	    }
+
+	    g.draw_rect(color, x, y, w, h);
+            g.draw_rect(self.background_color, x + VIEW_BORDER, y + VIEW_BORDER, w - VIEW_BORDER * 2, h - VIEW_BORDER * 2);
+	}
     }
 
-    fn render_detail(&mut self, g: &mut dyn Graphics) {
+    fn render_detail(&self, g: &mut dyn Graphics) {
         let (vw, vh) = g.get_viewport();
         let (_, fh) = self.font_size;
 
-	let x = VIEW_MARGIN;
-	let y = vh - DETAIL_VIEW_HEIGHT - fh - VIEW_MARGIN * 2;
-	let w = vw - VIEW_MARGIN * 2;
-	let h = DETAIL_VIEW_HEIGHT;
+	if self.active_view == ActiveView::Detail {
+	    let x = VIEW_MARGIN;
+	    let y = vh - DETAIL_VIEW_HEIGHT - fh - VIEW_MARGIN * 2;
+	    let w = vw - VIEW_MARGIN * 2;
+	    let h = DETAIL_VIEW_HEIGHT;
 
-        g.draw_rect(self.view_color, x, y, w, h);
-        g.draw_rect(Color::new(0, 0, 0, 255), x + VIEW_BORDER, y + VIEW_BORDER, w - VIEW_BORDER * 2, h - VIEW_BORDER * 2);
+	    let mut color = self.select_color;
+	    if self.prompt_is_active {
+		color.alpha = 128;
+	    }
+
+	    g.draw_rect(color, x, y, w, h);
+	    g.draw_rect(self.background_color, x + VIEW_BORDER, y + VIEW_BORDER, w - VIEW_BORDER * 2, h - VIEW_BORDER * 2);
+	}
     }
 
     fn render_prompt(&mut self, g: &mut dyn Graphics) {
@@ -88,13 +150,18 @@ impl UserInterface {
 	let x = VIEW_MARGIN;
         let y = vh - fh - VIEW_MARGIN;
 
+	let text_color = if self.prompt_is_active {
+	    Color::new(255, 255, 255, 255)
+	} else {
+	    Color::new(255, 255, 255, 128)
+	};
 	let bitmap = bitmap_from_char('>');
-	let char = Image::from_bitmap(&bitmap, Color::new(255, 255, 255, 255));
+	let char = Image::from_bitmap(&bitmap, text_color);
 	g.draw_image(&char, x, y);
 
         for (i, c) in self.prompt.chars().enumerate() {
             let bitmap = bitmap_from_char(c);
-            let char = Image::from_bitmap(&bitmap, Color::new(255, 255, 255, 255));
+            let char = Image::from_bitmap(&bitmap, text_color);
             g.draw_image(&char, VIEW_MARGIN + (i as i32 + 1) * fw, y);
         }
     }
