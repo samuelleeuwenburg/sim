@@ -73,7 +73,7 @@ pub fn sample(pointer: *mut f32, size: usize) {
     match (grid.as_mut(), audio.as_mut()) {
         (Some(mut grid), Some(audio)) => {
             let (l, r) = audio.sample(&mut grid);
-            let mut buffer = unsafe { slice::from_raw_parts_mut(pointer, size) };
+            let buffer = unsafe { slice::from_raw_parts_mut(pointer, size) };
 
             assert_eq!(l.len() + r.len(), size);
 
@@ -93,24 +93,24 @@ pub fn sample(pointer: *mut f32, size: usize) {
 pub fn render_image(pointer: *mut u8, size: usize) {
     let mut ui = UI.lock().unwrap();
     let mut graphics = GRAPHICS.lock().unwrap();
-    let grid = GRID.lock().unwrap();
+    let mut grid = GRID.lock().unwrap();
     let mut input_state = INPUT.lock().unwrap();
 
     match (
-        grid.as_ref(),
+        grid.as_mut(),
         ui.as_mut(),
         graphics.as_mut(),
         input_state.as_mut(),
     ) {
         (Some(grid), Some(ui), Some(graphics), Some(input_state)) => {
-            ui.process_input(input_state);
+            ui.process_input(grid, input_state);
             input_state.clear_buffer();
             ui.render(graphics, grid);
             let image = graphics.render_image();
 
             assert_eq!(size, image.data.len() * 4);
 
-            let mut buffer = unsafe { slice::from_raw_parts_mut(pointer, size) };
+            let buffer = unsafe { slice::from_raw_parts_mut(pointer, size) };
 
             for (i, color) in image.data.iter().enumerate() {
                 buffer[i * 4] = color.red;
@@ -139,6 +139,10 @@ pub fn handle_key_down(input: String) {
             "Alt" => input_state.key_down(Input::Alt),
             "Control" => input_state.key_down(Input::Control),
             "Meta" => input_state.key_down(Input::Meta),
+            "ArrowUp" => input_state.key_down(Input::Up),
+            "ArrowRight" => input_state.key_down(Input::Right),
+            "ArrowDown" => input_state.key_down(Input::Down),
+            "ArrowLeft" => input_state.key_down(Input::Left),
             _ => {
                 if let Some(c) = input.chars().next() {
                     input_state.key_down(Input::Char(c));
@@ -166,6 +170,10 @@ pub fn handle_key_up(input: String) {
             "Alt" => input_state.key_up(Input::Alt),
             "Control" => input_state.key_up(Input::Control),
             "Meta" => input_state.key_up(Input::Meta),
+            "ArrowUp" => input_state.key_up(Input::Up),
+            "ArrowRight" => input_state.key_up(Input::Right),
+            "ArrowDown" => input_state.key_up(Input::Down),
+            "ArrowLeft" => input_state.key_up(Input::Left),
             _ => {
                 if let Some(c) = input.chars().next() {
                     input_state.key_up(Input::Char(c));

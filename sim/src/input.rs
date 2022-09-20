@@ -12,6 +12,10 @@ pub enum Input {
     Alt,
     Control,
     Meta,
+    Up,
+    Right,
+    Down,
+    Left,
 }
 
 pub struct InputState {

@@ -5,6 +5,7 @@ mod image;
 
 use crate::glyphs::ascii::bitmap_from_char;
 use crate::{Grid, Input, InputState};
+use crate::grid::Position;
 pub use bitmap::Bitmap;
 pub use color::Color;
 pub use graphics::Graphics;
@@ -43,8 +44,8 @@ impl UserInterface {
         }
     }
 
-    pub fn process_input(&mut self, input_state: &InputState) {
-        for input in &input_state.buffer {
+    pub fn process_input(&mut self, grid: &mut Grid, input_state: &InputState) {
+	for input in &input_state.buffer {
 	    if self.prompt_is_active {
 		match input {
 		    Input::Char(c) => {
@@ -71,6 +72,18 @@ impl UserInterface {
 		match self.active_view {
 		    ActiveView::Grid => {
 			match input {
+			    Input::Char('l') | Input::Right => {
+				grid.cursor_position = grid.cursor_position.add(Position::new(1, 0));
+			    }
+			    Input::Char('h') | Input::Left => {
+				grid.cursor_position = grid.cursor_position.add(Position::new(-1, 0));
+			    }
+			    Input::Char('k') | Input::Up => {
+				grid.cursor_position = grid.cursor_position.add(Position::new(0, -1));
+			    }
+			    Input::Char('j') | Input::Down => {
+				grid.cursor_position = grid.cursor_position.add(Position::new(0, 1));
+			    }
 			    Input::Tab => {
 				self.active_view = ActiveView::Detail;
 			    }
@@ -107,6 +120,7 @@ impl UserInterface {
     fn render_grid(&self, g: &mut dyn Graphics, grid: &Grid) {
         let (vw, vh) = g.get_viewport();
         let (_, fh) = self.font_size;
+	let (gw, gh) = self.grid_block_size;
 
 	if self.active_view == ActiveView::Grid {
 	    let x = VIEW_MARGIN;
@@ -121,6 +135,33 @@ impl UserInterface {
 
 	    g.draw_rect(color, x, y, w, h);
             g.draw_rect(self.background_color, x + VIEW_BORDER, y + VIEW_BORDER, w - VIEW_BORDER * 2, h - VIEW_BORDER * 2);
+	}
+
+	let grid_width = vw - VIEW_MARGIN * 2 - VIEW_BORDER * 2;
+	let grid_height = vh - DETAIL_VIEW_HEIGHT - fh - VIEW_MARGIN * 4 - VIEW_BORDER * 2;
+	let grid_blocks_x = grid_width / gw;
+	let grid_blocks_y = grid_height / gh;
+
+	for y in 0..grid_blocks_y {
+	    for x in 0..grid_blocks_x {
+		let offset = VIEW_MARGIN + VIEW_BORDER;
+		let pos_x = offset + x * gw;
+		let pos_y = offset + y * gh;
+		let pos = Position::new(x, y).add(grid.window_position);
+
+		if let Some(image) = grid.get_image_for_pos(pos) {
+		    g.draw_image(&image, pos_x, pos_y);
+		} else {
+		    let bitmap = bitmap_from_char('.');
+		    let color = if y % 4 == 0 && x % 4 == 0 {
+			Color::new(255, 255, 255, 128)
+		    } else {
+			Color::new(255, 255, 255, 64)
+		    };
+		    let char = Image::from_bitmap(&bitmap, color);
+		    g.draw_image(&char, pos_x, pos_y);
+		}
+	    }
 	}
     }
 
