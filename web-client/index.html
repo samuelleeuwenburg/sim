@@ -4,11 +4,38 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SIM</title>
+    <style>
+      html {
+	  box-sizing: border-box;
+      }
+      *, *:before, *:after {
+	  box-sizing: inherit;
+      }
+
+      body {
+	  margin: 0;
+	  background: #121212;
+      }
+
+      #root {
+	  text-align: center;
+	  margin-top: 4rem;
+      }
+
+      button {
+	  font-size: 1.618rem;
+      }
+
+      canvas {
+	  flex: none;
+      }
+      
+    </style>
   </head>
   <body>
     <div id="root">
-      <canvas id="viewport" width="1280" height="720"></canvas>
-      <button id="start">start sim</button>
+      <button id="start">start</button>
+      <canvas id="viewport" width="1" height="1"></canvas>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

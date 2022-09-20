@@ -32,6 +32,8 @@ const handleKeyUp = (e: KeyboardEvent) => {
 
 startButton &&
   startButton.addEventListener("click", () => {
+    startButton.remove();
+
     const audioCtx = new AudioContext({
       latencyHint: "interactive",
       sampleRate,
