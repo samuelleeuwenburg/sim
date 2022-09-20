@@ -59,7 +59,7 @@ pub fn init_sim(sample_rate: usize, buffer_size: usize, width: i32, height: i32)
     let _ = ui.insert(UserInterface::new());
 
     let mut graphics = GRAPHICS.lock().unwrap();
-    let _ = graphics.insert(WebGraphics::new(width, height, 5));
+    let _ = graphics.insert(WebGraphics::new(width, height, 3));
 
     let mut input = INPUT.lock().unwrap();
     let _ = input.insert(InputState::new());
