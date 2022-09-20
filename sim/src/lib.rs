@@ -1,9 +1,9 @@
 mod audio;
 mod entity;
+mod glyphs;
 mod grid;
 mod input;
 mod ui;
-mod glyphs;
 
 pub use audio::Audio;
 pub use grid::Grid;

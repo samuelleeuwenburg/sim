@@ -6,4 +6,3 @@ pub trait Graphics {
     fn draw_rect(&mut self, color: Color, x: i32, y: i32, w: i32, h: i32);
     fn draw_image(&mut self, image: &Image, x: i32, y: i32);
 }
-

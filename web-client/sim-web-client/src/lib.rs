@@ -1,8 +1,8 @@
 mod utils;
 mod web_graphics;
-use web_sys::console;
 use js_sys::{Float32Array, Uint8ClampedArray};
 use wasm_bindgen::__rt::core::{mem, slice};
+use web_sys::console;
 
 use sim::{Audio, Grid, Input, InputState, UserInterface};
 use std::sync::Mutex;
@@ -73,17 +73,17 @@ pub fn sample(pointer: *mut f32, size: usize) {
     match (grid.as_mut(), audio.as_mut()) {
         (Some(mut grid), Some(audio)) => {
             let (l, r) = audio.sample(&mut grid);
-	    let mut buffer = unsafe { slice::from_raw_parts_mut(pointer, size) };
+            let mut buffer = unsafe { slice::from_raw_parts_mut(pointer, size) };
 
-	    assert_eq!(l.len() + r.len(), size);
+            assert_eq!(l.len() + r.len(), size);
 
-	    for (i, s) in l.iter().enumerate() {
-	    	buffer[i] = *s;
-	    }
+            for (i, s) in l.iter().enumerate() {
+                buffer[i] = *s;
+            }
 
-	    for (i, s) in l.iter().enumerate() {
-	    	buffer[size / 2 + i] = *s;
-	    }
+            for (i, s) in l.iter().enumerate() {
+                buffer[size / 2 + i] = *s;
+            }
         }
         _ => (),
     }
@@ -96,26 +96,30 @@ pub fn render_image(pointer: *mut u8, size: usize) {
     let grid = GRID.lock().unwrap();
     let mut input_state = INPUT.lock().unwrap();
 
-    match (grid.as_ref(), ui.as_mut(), graphics.as_mut(), input_state.as_mut()) {
-	(Some(grid), Some(ui), Some(graphics), Some(input_state)) => {
-	    ui.process_input(input_state);
-	    input_state.clear_buffer();
-	    ui.render(graphics, grid);
-	    let image = graphics.render_image();
+    match (
+        grid.as_ref(),
+        ui.as_mut(),
+        graphics.as_mut(),
+        input_state.as_mut(),
+    ) {
+        (Some(grid), Some(ui), Some(graphics), Some(input_state)) => {
+            ui.process_input(input_state);
+            input_state.clear_buffer();
+            ui.render(graphics, grid);
+            let image = graphics.render_image();
 
+            assert_eq!(size, image.data.len() * 4);
 
-	    assert_eq!(size, image.data.len() * 4);
+            let mut buffer = unsafe { slice::from_raw_parts_mut(pointer, size) };
 
-	    let mut buffer = unsafe { slice::from_raw_parts_mut(pointer, size) };
-
-	    for (i, color) in image.data.iter().enumerate() {
-		buffer[i * 4] = color.red;
-		buffer[i * 4 + 1] = color.green;
-		buffer[i * 4 + 2] = color.blue;
-		buffer[i * 4 + 3] = color.alpha;
-	    }
-	}
-	_ => (),
+            for (i, color) in image.data.iter().enumerate() {
+                buffer[i * 4] = color.red;
+                buffer[i * 4 + 1] = color.green;
+                buffer[i * 4 + 2] = color.blue;
+                buffer[i * 4 + 3] = color.alpha;
+            }
+        }
+        _ => (),
     }
 }
 
@@ -128,6 +132,13 @@ pub fn handle_key_down(input: String) {
             "Tab" => input_state.key_down(Input::Tab),
             "Space" => input_state.key_down(Input::Space),
             "Enter" => input_state.key_down(Input::Enter),
+            "Escape" => input_state.key_down(Input::Escape),
+            "Space" => input_state.key_down(Input::Space),
+            "Shift" => input_state.key_down(Input::Shift),
+            "Backspace" => input_state.key_down(Input::Backspace),
+            "Alt" => input_state.key_down(Input::Alt),
+            "Control" => input_state.key_down(Input::Control),
+            "Meta" => input_state.key_down(Input::Meta),
             _ => {
                 if let Some(c) = input.chars().next() {
                     input_state.key_down(Input::Char(c));
@@ -148,6 +159,13 @@ pub fn handle_key_up(input: String) {
             "Tab" => input_state.key_up(Input::Tab),
             "Space" => input_state.key_up(Input::Space),
             "Enter" => input_state.key_up(Input::Enter),
+            "Escape" => input_state.key_up(Input::Escape),
+            "Space" => input_state.key_up(Input::Space),
+            "Shift" => input_state.key_up(Input::Shift),
+            "Backspace" => input_state.key_up(Input::Backspace),
+            "Alt" => input_state.key_up(Input::Alt),
+            "Control" => input_state.key_up(Input::Control),
+            "Meta" => input_state.key_up(Input::Meta),
             _ => {
                 if let Some(c) = input.chars().next() {
                     input_state.key_up(Input::Char(c));

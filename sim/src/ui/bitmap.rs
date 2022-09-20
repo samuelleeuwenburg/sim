@@ -2,7 +2,7 @@ pub struct Bitmap {
     pub width: i32,
     pub height: i32,
     /// one byte represents 8 pixels on the grid, each bit being a pixel
-    pub data: Vec<u8>
+    pub data: Vec<u8>,
 }
 
 impl Bitmap {

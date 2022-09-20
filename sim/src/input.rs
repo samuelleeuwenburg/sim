@@ -5,7 +5,13 @@ pub enum Input {
     Char(char),
     Enter,
     Tab,
+    Escape,
     Space,
+    Shift,
+    Backspace,
+    Alt,
+    Control,
+    Meta,
 }
 
 pub struct InputState {
@@ -31,6 +37,6 @@ impl InputState {
     }
 
     pub fn clear_buffer(&mut self) {
-	self.buffer.clear();
+        self.buffer.clear();
     }
 }

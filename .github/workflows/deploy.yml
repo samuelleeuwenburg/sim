@@ -5,21 +5,24 @@ on:
     workflows: ["tests"]
     branches: [main]
     types:
-      - completed
+        completed
 
 jobs:
   deploy:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: Build & deploy
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./web-client
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-      - name: Build project
-        uses: actions/setup-node@v1
+      - uses: actions/setup-node@v1
         with:
           node-version: 14.x
+
+      - uses: jetli/wasm-pack-action@v0.3.0
 
       - run: npm ci
       - run: npm run build
@@ -31,5 +34,5 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.PORT }}
-          source: "dist"
+          source: "./web-client/dist"
           target: ${{ secrets.REMOTE_DIR }}

@@ -62,42 +62,42 @@ impl Image {
     pub fn scale(&mut self, factor: usize) {
         let height = self.height as usize * factor;
         let width = self.width as usize * factor;
-	let new_length = width * height;
+        let new_length = width * height;
         let mut data = vec![Color::empty(); new_length];
 
-	for (i, color) in self.data.iter().enumerate() {
-	    let offset_column = i * factor % width;
-	    let offset_row = (i / self.width as usize) * width * factor;
-	    let offset = offset_column + offset_row;
+        for (i, color) in self.data.iter().enumerate() {
+            let offset_column = i * factor % width;
+            let offset_row = (i / self.width as usize) * width * factor;
+            let offset = offset_column + offset_row;
 
-	    for r in 0..factor {
-		let row = r * width;
-		for column in 0..factor {
-		    data[offset + row + column] = *color;
-		}
-	    }
-	}
+            for r in 0..factor {
+                let row = r * width;
+                for column in 0..factor {
+                    data[offset + row + column] = *color;
+                }
+            }
+        }
 
-	self.width = width as i32;
-	self.height = height as i32;
+        self.width = width as i32;
+        self.height = height as i32;
         self.data = data;
     }
 
     #[allow(dead_code)]
     pub fn to_ascii(&self) -> String {
-	let mut ascii = String::from("");
+        let mut ascii = String::from("");
 
-	for color in self.data.iter() {
-	    if color == &Color::full() {
-		ascii.push_str("1");
-	    } else if color == &Color::empty() {
-		ascii.push_str("0");
-	    } else {
-		ascii.push_str("?");
-	    }
-	}
+        for color in self.data.iter() {
+            if color == &Color::full() {
+                ascii.push_str("1");
+            } else if color == &Color::empty() {
+                ascii.push_str("0");
+            } else {
+                ascii.push_str("?");
+            }
+        }
 
-	ascii
+        ascii
     }
 }
 
@@ -108,62 +108,62 @@ mod tests {
     #[test]
     fn test_image_scale_2() {
         let mut image = Image::new(1, 1);
-	image.data[0] = Color::full();
-	image.scale(2);
+        image.data[0] = Color::full();
+        image.scale(2);
 
         assert_eq!(image.data.len(), 4);
-	assert_eq!(
-	    &image.to_ascii(),
-	    "11\
+        assert_eq!(
+            &image.to_ascii(),
+            "11\
 	     11\
 	    "
-	);
+        );
 
         image.data[0] = Color::empty();
         image.data[1] = Color::full();
         image.data[2] = Color::full();
         image.data[3] = Color::empty();
 
-	assert_eq!(
-	    &image.to_ascii(),
-	    "01\
+        assert_eq!(
+            &image.to_ascii(),
+            "01\
 	     10\
 	    "
-	);
+        );
 
         image.scale(2);
         assert_eq!(image.data.len(), 16);
-	assert_eq!(
-	    &image.to_ascii(),
-	    "0011\
+        assert_eq!(
+            &image.to_ascii(),
+            "0011\
 	     0011\
 	     1100\
 	     1100\
 	    "
-	);
+        );
     }
 
     #[test]
     fn test_image_scale_4() {
         let mut image = Image::new(2, 2);
-	image.data[0] = Color::full();
-	image.data[1] = Color::empty();
-	image.data[2] = Color::empty();
-	image.data[3] = Color::full();
+        image.data[0] = Color::full();
+        image.data[1] = Color::empty();
+        image.data[2] = Color::empty();
+        image.data[3] = Color::full();
 
-	assert_eq!(
-	    &image.to_ascii(),
-	    "10\
+        assert_eq!(
+            &image.to_ascii(),
+            "10\
 	     01\
 	    "
-	);
+        );
 
-	image.scale(4);
+        image.scale(4);
 
-	assert_eq!(image.data.len(), 64);
-	assert_eq!(
-	    &image.to_ascii(),
-	    "11110000\
+        assert_eq!(image.data.len(), 64);
+        assert_eq!(
+            &image.to_ascii(),
+            "11110000\
 	     11110000\
 	     11110000\
 	     11110000\
@@ -172,7 +172,7 @@ mod tests {
 	     00001111\
 	     00001111\
 	    "
-	);
+        );
     }
 
     #[test]
@@ -184,12 +184,12 @@ mod tests {
         assert_eq!(image.width, 8);
         assert_eq!(image.height, 2);
 
-	assert_eq!(
-	    &image.to_ascii(),
-	    "10101110\
+        assert_eq!(
+            &image.to_ascii(),
+            "10101110\
 	     01010111\
 	    "
-	);
+        );
     }
 
     #[test]
