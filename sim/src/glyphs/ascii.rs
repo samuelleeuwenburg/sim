@@ -1,21 +1,10 @@
-use crate::Bitmap;
+use super::{CHARACTER_WIDTH, CHARACTER_HEIGHT};
 
-pub fn bitmap_from_char(c: char) -> Bitmap {
-    let keycode = c as usize;
-    if keycode >= 32 {
-        let start = (keycode - 32) * 8;
-        let end = start + 8;
-        Bitmap::new(8, 8, &ASCII[start..end])
-    } else {
-        Bitmap::new(8, 8, &UNKNOWN)
-    }
-}
-
-const UNKNOWN: [u8; 8] = [
+pub const UNKNOWN: [u8; CHARACTER_HEIGHT] = [
     0b11111111, 0b10000001, 0b10000001, 0b10000001, 0b10000001, 0b10000001, 0b10000001, 0b11111111,
 ];
 
-const ASCII: [u8; 95 * 8] = [
+pub const ASCII: [u8; 95 * CHARACTER_HEIGHT] = [
     // \s
     0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
     // !

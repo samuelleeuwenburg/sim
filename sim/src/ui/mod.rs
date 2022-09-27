@@ -3,7 +3,7 @@ mod color;
 mod graphics;
 mod image;
 
-use crate::glyphs::ascii::bitmap_from_char;
+use crate::glyphs::bitmap_from_char;
 use crate::{Grid, Input, InputState};
 use crate::grid::Position;
 pub use bitmap::Bitmap;
@@ -11,9 +11,9 @@ pub use color::Color;
 pub use graphics::Graphics;
 pub use image::Image;
 
-static DETAIL_VIEW_HEIGHT: i32 = 80;
-static VIEW_BORDER: i32 = 1;
-static VIEW_MARGIN: i32 = 4;
+static DETAIL_VIEW_HEIGHT: i32 = 120;
+static VIEW_BORDER: i32 = 2;
+static VIEW_MARGIN: i32 = 8;
 
 #[derive(PartialEq)]
 enum ActiveView {
@@ -36,7 +36,7 @@ impl UserInterface {
         UserInterface {
 	    select_color: Color::new(00, 209, 255, 255),
 	    background_color: Color::new(0, 0, 0, 255),
-            grid_block_size: (8, 8),
+            grid_block_size: (16, 16),
             font_size: (8, 8),
             prompt: String::from(""),
 	    prompt_is_active: false,
@@ -53,6 +53,7 @@ impl UserInterface {
 		    }
 		    Input::Enter => {
 			self.prompt.clear();
+			self.prompt_is_active = false;
 		    }
 		    Input::Backspace => {
 			self.prompt.pop();
@@ -152,13 +153,13 @@ impl UserInterface {
 		if let Some(image) = grid.get_image_for_pos(pos) {
 		    g.draw_image(&image, pos_x, pos_y);
 		} else {
-		    let bitmap = bitmap_from_char('.');
 		    let color = if y % 4 == 0 && x % 4 == 0 {
 			Color::new(255, 255, 255, 128)
 		    } else {
 			Color::new(255, 255, 255, 64)
 		    };
-		    let char = Image::from_bitmap(&bitmap, color);
+		    let mut char = Image::new(2, 2);
+		    char.clear(color);
 		    g.draw_image(&char, pos_x, pos_y);
 		}
 	    }

@@ -59,7 +59,7 @@ pub fn init_sim(sample_rate: usize, buffer_size: usize, width: i32, height: i32)
     let _ = ui.insert(UserInterface::new());
 
     let mut graphics = GRAPHICS.lock().unwrap();
-    let _ = graphics.insert(WebGraphics::new(width, height, 3));
+    let _ = graphics.insert(WebGraphics::new(width, height, 2));
 
     let mut input = INPUT.lock().unwrap();
     let _ = input.insert(InputState::new());
@@ -133,7 +133,6 @@ pub fn handle_key_down(input: String) {
             "Space" => input_state.key_down(Input::Space),
             "Enter" => input_state.key_down(Input::Enter),
             "Escape" => input_state.key_down(Input::Escape),
-            "Space" => input_state.key_down(Input::Space),
             "Shift" => input_state.key_down(Input::Shift),
             "Backspace" => input_state.key_down(Input::Backspace),
             "Alt" => input_state.key_down(Input::Alt),
@@ -164,7 +163,6 @@ pub fn handle_key_up(input: String) {
             "Space" => input_state.key_up(Input::Space),
             "Enter" => input_state.key_up(Input::Enter),
             "Escape" => input_state.key_up(Input::Escape),
-            "Space" => input_state.key_up(Input::Space),
             "Shift" => input_state.key_up(Input::Shift),
             "Backspace" => input_state.key_up(Input::Backspace),
             "Alt" => input_state.key_up(Input::Alt),

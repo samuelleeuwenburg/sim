@@ -2,7 +2,6 @@ pub mod position;
 pub mod rect;
 
 use crate::entity::Entity;
-use crate::glyphs::ascii::bitmap_from_char;
 use crate::{Color, Image};
 pub use position::Position;
 pub use rect::Rect;
@@ -28,8 +27,8 @@ impl Grid {
 
     pub fn get_image_for_pos(&self, pos: Position) -> Option<Image> {
 	if self.cursor_position == pos {
-	    let bitmap = bitmap_from_char('.');
-	    let image = Image::from_bitmap(&bitmap, Color::new(251, 255, 38, 255));
+	    let mut image = Image::new(4, 4);
+	    image.clear(Color::new(251, 255, 38, 255));
 	    Some(image)
 	} else {
 	    for entity in self.entities.iter() {
